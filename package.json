@@ -1,0 +1,24 @@
+{
+  "name": "mascotas-en-camino-catalogo",
+  "version": "1.0.0",
+  "description": "Catálogo de productos para mascotas configurable, sin base de datos, con carrito temporal y checkout por WhatsApp.",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n server,client -c magenta,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "node --watch server/index.js",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client install && npm --prefix client run build",
+    "build:static": "node scripts/build-static.mjs",
+    "vercel-build": "node scripts/build-static.mjs && npm --prefix client install && npm --prefix client run build",
+    "start": "node server/index.js",
+    "install:all": "npm install && npm --prefix client install"
+  },
+  "dependencies": {
+    "compression": "^1.7.5",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

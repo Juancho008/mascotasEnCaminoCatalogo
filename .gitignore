@@ -1,0 +1,13 @@
+node_modules/
+client/node_modules/
+client/dist/
+.vercel
+
+# Archivos generados por el build estático
+client/public/catalog.json
+client/public/inventory/
+client/public/images/
+
+.env
+*.log
+.DS_Store

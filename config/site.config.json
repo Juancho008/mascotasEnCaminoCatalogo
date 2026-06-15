@@ -1,0 +1,34 @@
+{
+  "storeName": "Mascotas en Camino",
+  "tagline": "Productos con amor para tu mejor amigo",
+  "whatsappNumber": "5491100000000",
+  "whatsappMessageHeader": "¡Hola! 🐾 Quiero hacer este pedido desde el catálogo:",
+  "whatsappMessageFooter": "¿Me confirman disponibilidad y forma de pago? ¡Gracias! 💙",
+  "currency": "$",
+  "currencyPosition": "before",
+  "locale": "es-AR",
+  "inventoryDir": "src",
+  "logo": "/images/Logo/LogoMascotaEnCamino.png",
+  "theme": {
+    "primary": "#E23B3B",
+    "secondary": "#1F3A5F",
+    "accent": "#FF8FA3",
+    "background": "#FFF7F1",
+    "surface": "#FFFFFF",
+    "text": "#243447",
+    "muted": "#7A8AA0"
+  },
+  "categoryDefaults": {
+    "defaultPrice": 0,
+    "emoji": "🐾"
+  },
+  "categories": {
+    "Collares": {
+      "label": "Collares",
+      "emoji": "🦴",
+      "description": "Collares cómodos y resistentes para paseos seguros",
+      "defaultPrice": 4500,
+      "order": 1
+    }
+  }
+}
