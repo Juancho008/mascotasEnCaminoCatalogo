@@ -14,3 +14,6 @@ id = "4efc2fb7852b4d23a0f8b1751cd8bcdb"
 
 # Token para PUT /api/catalog (opcional, solo si querés actualizar desde fuera)
 # wrangler secret put ADMIN_TOKEN
+
+# Secreto HMAC compartido con Vercel (mismo valor en ambos lados)
+# wrangler secret put CATALOG_HMAC_SECRET

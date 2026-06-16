@@ -5,6 +5,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { buildCatalog, inventoryAbsoluteDir, ROOT_DIR } from "./catalog.js";
+import { createHmacHeaders } from "../lib/hmac.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4000;
@@ -26,7 +27,33 @@ function sendCatalog(req, res) {
 }
 
 app.get("/catalog.json", sendCatalog);
-app.get("/api/catalog", sendCatalog);
+
+// Proxy firmado hacia Cloudflare (misma lógica que api/catalog.js en Vercel).
+// Si no hay secret configurado, sirve el catálogo local para desarrollo.
+app.get("/api/catalog", async (req, res) => {
+  const workerBase = process.env.CATALOG_WORKER_URL?.replace(/\/$/, "");
+  const secret = process.env.CATALOG_HMAC_SECRET;
+
+  if (workerBase && secret) {
+    try {
+      const headers = createHmacHeaders(secret, "GET", "/catalog.json");
+      const response = await fetch(`${workerBase}/catalog.json`, { headers });
+      const body = await response.text();
+      res
+        .status(response.status)
+        .set("Cache-Control", "public, max-age=60")
+        .type("json")
+        .send(body);
+      return;
+    } catch (err) {
+      console.error("[api/catalog proxy]", err);
+      res.status(502).json({ error: "No se pudo obtener el catálogo remoto" });
+      return;
+    }
+  }
+
+  sendCatalog(req, res);
+});
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 

@@ -31,7 +31,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [query, setQuery] = useState("");
 
-  const catalogUrl = import.meta.env.VITE_CATALOG_API || "/catalog.json";
+  const catalogUrl = import.meta.env.VITE_CATALOG_API || "/api/catalog";
 
   useEffect(() => {
     let cancelled = false;

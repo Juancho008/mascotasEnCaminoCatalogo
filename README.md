@@ -199,16 +199,18 @@ Si querés que el catálogo **no esté “congelado” en un JSON estático** y 
 
 KV guarda texto/JSON, no imágenes. Las fotos siguen sirviéndose como archivos estáticos.
 
-### Arquitectura
+### Arquitectura (con HMAC — recomendada en Vercel)
 
 ```
-Frontend (React)  ──GET──►  Worker (Cloudflare)  ──►  KV["catalog"]
-     │                                                    ▲
-     └── imágenes estáticas (/inventory, /images)         │
-                                                           │
-                              npm run kv:sync ─────────────┘
-                              (sube catalog.json desde tu PC)
+Navegador  ──GET /api/catalog──►  Vercel (función serverless)
+                                       │ firma HMAC con secreto
+                                       ▼
+                                  Worker (Cloudflare)  ──►  KV["catalog"]
+                                       ▲
+                                       │ npm run kv:sync
 ```
+
+El **secreto HMAC nunca va al navegador**. Vercel lo guarda como variable de servidor y firma cada pedido al Worker.
 
 ### Paso a paso
 
@@ -245,47 +247,58 @@ Esto genera `client/public/catalog.json` desde tus carpetas + JSON de config y l
 npm run kv:sync
 ```
 
-#### 5. Probar el Worker en local
+#### 5. Configurar el secreto HMAC (mismo valor en Cloudflare y Vercel)
+
+Generá un secreto largo (ej. 32+ caracteres aleatorios) y configurarlo en **ambos** lados:
+
+```bash
+# En Cloudflare (Worker)
+npx wrangler secret put CATALOG_HMAC_SECRET
+
+# Redeploy del Worker para aplicar el secret
+npm run worker:deploy
+```
+
+En **Vercel** → Settings → Environment Variables (sin prefijo `VITE_`):
+
+| Key | Value |
+|-----|-------|
+| `CATALOG_WORKER_URL` | `https://mascotas-catalogo-api.TU_SUBDOMINIO.workers.dev` |
+| `CATALOG_HMAC_SECRET` | el mismo secreto que pusiste en Cloudflare |
+
+> ⚠️ **No uses `VITE_`** para el secreto: cualquier variable `VITE_*` se embebe en el JavaScript del navegador y cualquiera podría leerla.
+
+Si antes agregaste `VITE_CATALOG_API` apuntando al Worker, **eliminala** — ahora el frontend usa `/api/catalog` y el proxy de Vercel firma con HMAC.
+
+#### 6. Redeploy en Vercel
+
+Deployments → Redeploy. El sitio pedirá el catálogo a `/api/catalog` (mismo dominio), y Vercel hablará con Cloudflare usando el secreto.
+
+#### 7. Probar el Worker en local (opcional)
 
 ```bash
 npm run worker:dev
 ```
 
-Abrí: http://localhost:8787/catalog.json — deberías ver el catálogo.
+Sin firma HMAC, `/catalog.json` devuelve **401** si configuraste el secret. Eso es correcto: en producción solo Vercel puede pedir el catálogo.
 
-#### 6. Conectar el frontend a la API
+### Desarrollo local con HMAC
 
-Creá `client/.env` (copiá de `client/.env.example`):
-
-```env
-# Local con wrangler dev:
-VITE_CATALOG_API=http://localhost:8787/catalog.json
-
-# Producción (después del deploy):
-# VITE_CATALOG_API=https://mascotas-catalogo-api.TU_SUBDOMINIO.workers.dev/catalog.json
-```
-
-Reiniciá Vite (`npm run dev:client`) para que tome la variable.
-
-Si **no** definís `VITE_CATALOG_API`, el sitio sigue usando `/catalog.json` como antes (estático o Express).
-
-#### 7. Publicar el Worker
+Copiá `.env.example` a `.env` en la raíz con `CATALOG_WORKER_URL` y `CATALOG_HMAC_SECRET`. Express y Vite proxyean `/api/catalog` con la misma firma que en producción.
 
 ```bash
-npm run worker:deploy
+npm run dev
 ```
 
-La URL quedará algo como: `https://mascotas-catalogo-api.TU_SUBDOMINIO.workers.dev`
-
-Actualizá `client/.env` con esa URL y volvé a hacer build/deploy del frontend.
+Si no configurás el `.env`, `/api/catalog` sirve el catálogo local (sin Cloudflare) para desarrollo simple.
 
 ### Endpoints del Worker
 
 | Método | Ruta | Qué hace |
 |--------|------|----------|
-| `GET` | `/catalog.json` | Devuelve el catálogo desde KV |
+| `GET` | `/catalog.json` | Devuelve el catálogo desde KV (**requiere HMAC** si hay secret) |
 | `GET` | `/api/catalog` | Igual que arriba |
-| `GET` | `/api/health` | `{ ok: true, hasCatalog: true/false }` |
+| `GET` | `/api/health` | `{ ok: true, hasCatalog, hmacEnabled }` |
 | `PUT` | `/api/catalog` | Actualiza KV (requiere token, ver abajo) |
 
 ### Actualizar precios/productos con KV
@@ -333,6 +346,10 @@ curl -X PUT "https://TU-WORKER.workers.dev/api/catalog" \
 │   └── catalog.js          ← escanea carpetas + combina con los JSON
 ├── client/                 ← frontend React (Vite + Framer Motion)
 │   └── src/
+├── api/
+│   └── catalog.js          ← proxy Vercel con firma HMAC (secreto server-side)
+├── lib/
+│   └── hmac.mjs            ← firma HMAC compartida (Vercel + Express local)
 ├── scripts/
 │   ├── build-static.mjs    ← genera el sitio estático para Vercel
 │   └── sync-kv.mjs         ← sube catalog.json a Cloudflare KV
