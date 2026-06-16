@@ -10,6 +10,9 @@
     "build": "npm --prefix client install && npm --prefix client run build",
     "build:static": "node scripts/build-static.mjs",
     "vercel-build": "node scripts/build-static.mjs && npm --prefix client install && npm --prefix client run build",
+    "kv:sync": "node scripts/build-static.mjs && node scripts/sync-kv.mjs",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
     "start": "node server/index.js",
     "install:all": "npm install && npm --prefix client install"
   },
@@ -19,6 +22,7 @@
     "express": "^4.21.2"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "wrangler": "^4.14.0"
   }
 }

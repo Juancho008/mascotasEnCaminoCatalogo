@@ -31,9 +31,11 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [query, setQuery] = useState("");
 
+  const catalogUrl = import.meta.env.VITE_CATALOG_API || "/catalog.json";
+
   useEffect(() => {
     let cancelled = false;
-    fetch("/catalog.json")
+    fetch(catalogUrl)
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar el catálogo");
         return r.json();
@@ -49,7 +51,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [catalogUrl]);
 
   const filteredCategories = useMemo(() => {
     if (!catalog) return [];

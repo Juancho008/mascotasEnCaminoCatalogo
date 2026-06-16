@@ -1,0 +1,16 @@
+# Cloudflare Workers — API del catálogo con KV
+# Docs: https://developers.cloudflare.com/kv/
+
+name = "mascotas-catalogo-api"
+main = "worker/src/index.js"
+compatibility_date = "2024-11-01"
+
+# 1) Creá un namespace en el dashboard:
+#    Workers & Pages → KV → Create namespace (ej. "mascotas-catalogo")
+# 2) Pegá el ID acá:
+[[kv_namespaces]]
+binding = "KV_BINDING"
+id = "4efc2fb7852b4d23a0f8b1751cd8bcdb"
+
+# Token para PUT /api/catalog (opcional, solo si querés actualizar desde fuera)
+# wrangler secret put ADMIN_TOKEN

@@ -9,5 +9,6 @@ client/public/inventory/
 client/public/images/
 
 .env
+.dev.vars
 *.log
 .DS_Store

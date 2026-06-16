@@ -186,6 +186,138 @@ Como es estático, los cambios se aplican **al volver a desplegar**:
 
 ---
 
+## ☁️ Cloudflare KV + Workers (API del catálogo)
+
+Si querés que el catálogo **no esté “congelado” en un JSON estático** y se lea desde una API, podés usar **Cloudflare KV** con un **Worker**.
+
+### Qué va en KV y qué no
+
+| Dato | Dónde |
+|------|--------|
+| `catalog.json` (productos, precios, config del sitio) | **Cloudflare KV** |
+| Imágenes (`src/`, `images/`) | Sigue en hosting estático (Vercel, Pages, etc.) |
+
+KV guarda texto/JSON, no imágenes. Las fotos siguen sirviéndose como archivos estáticos.
+
+### Arquitectura
+
+```
+Frontend (React)  ──GET──►  Worker (Cloudflare)  ──►  KV["catalog"]
+     │                                                    ▲
+     └── imágenes estáticas (/inventory, /images)         │
+                                                           │
+                              npm run kv:sync ─────────────┘
+                              (sube catalog.json desde tu PC)
+```
+
+### Paso a paso
+
+#### 1. Crear el namespace KV
+
+1. Entrá a [dash.cloudflare.com](https://dash.cloudflare.com)
+2. **Workers & Pages** → **KV** → **Create a namespace**
+3. Nombre sugerido: `mascotas-catalogo`
+4. Copiá el **Namespace ID**
+
+#### 2. Configurar `wrangler.toml`
+
+En la raíz del proyecto, editá `wrangler.toml` y reemplazá los IDs:
+
+```toml
+[[kv_namespaces]]
+binding = "KV_BINDING"
+id = "TU_NAMESPACE_ID"
+preview_id = "TU_NAMESPACE_ID"
+```
+
+#### 3. Instalar y loguearte en Cloudflare
+
+```bash
+npm install
+npx wrangler login
+```
+
+#### 4. Subir el catálogo a KV
+
+Esto genera `client/public/catalog.json` desde tus carpetas + JSON de config y lo sube a KV:
+
+```bash
+npm run kv:sync
+```
+
+#### 5. Probar el Worker en local
+
+```bash
+npm run worker:dev
+```
+
+Abrí: http://localhost:8787/catalog.json — deberías ver el catálogo.
+
+#### 6. Conectar el frontend a la API
+
+Creá `client/.env` (copiá de `client/.env.example`):
+
+```env
+# Local con wrangler dev:
+VITE_CATALOG_API=http://localhost:8787/catalog.json
+
+# Producción (después del deploy):
+# VITE_CATALOG_API=https://mascotas-catalogo-api.TU_SUBDOMINIO.workers.dev/catalog.json
+```
+
+Reiniciá Vite (`npm run dev:client`) para que tome la variable.
+
+Si **no** definís `VITE_CATALOG_API`, el sitio sigue usando `/catalog.json` como antes (estático o Express).
+
+#### 7. Publicar el Worker
+
+```bash
+npm run worker:deploy
+```
+
+La URL quedará algo como: `https://mascotas-catalogo-api.TU_SUBDOMINIO.workers.dev`
+
+Actualizá `client/.env` con esa URL y volvé a hacer build/deploy del frontend.
+
+### Endpoints del Worker
+
+| Método | Ruta | Qué hace |
+|--------|------|----------|
+| `GET` | `/catalog.json` | Devuelve el catálogo desde KV |
+| `GET` | `/api/catalog` | Igual que arriba |
+| `GET` | `/api/health` | `{ ok: true, hasCatalog: true/false }` |
+| `PUT` | `/api/catalog` | Actualiza KV (requiere token, ver abajo) |
+
+### Actualizar precios/productos con KV
+
+1. Editá `config/products.json`, `config/site.config.json` o agregá imágenes en `src/`
+2. Volvé a subir:
+
+```bash
+npm run kv:sync
+```
+
+No hace falta redesplegar el Worker: solo actualizás la clave `catalog` en KV.
+
+### (Opcional) Actualizar por API con token
+
+Para un panel admin o script que haga `PUT` sin usar `wrangler`:
+
+```bash
+npx wrangler secret put ADMIN_TOKEN
+```
+
+Luego:
+
+```bash
+curl -X PUT "https://TU-WORKER.workers.dev/api/catalog" \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d @client/public/catalog.json
+```
+
+---
+
 ## 📁 Estructura del proyecto
 
 ```
@@ -202,7 +334,11 @@ Como es estático, los cambios se aplican **al volver a desplegar**:
 ├── client/                 ← frontend React (Vite + Framer Motion)
 │   └── src/
 ├── scripts/
-│   └── build-static.mjs    ← genera el sitio estático para Vercel
+│   ├── build-static.mjs    ← genera el sitio estático para Vercel
+│   └── sync-kv.mjs         ← sube catalog.json a Cloudflare KV
+├── worker/
+│   └── src/index.js        ← API del catálogo (Cloudflare Worker)
+├── wrangler.toml           ← config del Worker + binding KV
 ├── vercel.json             ← config de despliegue en Vercel
 └── package.json
 ```

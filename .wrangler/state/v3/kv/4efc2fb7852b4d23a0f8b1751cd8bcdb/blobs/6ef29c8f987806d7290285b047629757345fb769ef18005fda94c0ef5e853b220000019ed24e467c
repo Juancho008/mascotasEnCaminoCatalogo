@@ -1,0 +1,118 @@
+{
+  "site": {
+    "storeName": "Mascotas en Camino",
+    "tagline": "Productos con amor para tu mejor amigo",
+    "whatsappNumber": "5493764660481",
+    "whatsappMessageHeader": "¡Hola! 🐾 Quiero hacer este pedido desde el catálogo:",
+    "whatsappMessageFooter": "¿Me confirman disponibilidad y forma de pago? ¡Gracias! 💙",
+    "currency": "$",
+    "currencyPosition": "before",
+    "locale": "es-AR",
+    "logo": "/images/Logo/LogoMascotaEnCamino.png",
+    "theme": {
+      "primary": "#E23B3B",
+      "secondary": "#1F3A5F",
+      "accent": "#FF8FA3",
+      "background": "#FFF7F1",
+      "surface": "#FFFFFF",
+      "text": "#243447",
+      "muted": "#7A8AA0"
+    }
+  },
+  "categories": [
+    {
+      "id": "Collares",
+      "label": "Collares",
+      "emoji": "🦴",
+      "description": "Collares cómodos y resistentes para paseos seguros",
+      "order": 1,
+      "products": [
+        {
+          "id": "Collares/Collar-1.jpeg",
+          "name": "Collar Aventura",
+          "price": 6000,
+          "description": "Collar resistente ideal para paseos largos.",
+          "tags": [
+            "nuevo"
+          ],
+          "available": true,
+          "image": "/inventory/Collares/Collar-1.jpeg",
+          "category": "Collares"
+        },
+        {
+          "id": "Collares/Collar-2.jpeg",
+          "name": "Collar Confort",
+          "price": 6000,
+          "description": "Tejido suave que cuida el cuello de tu mascota.",
+          "tags": [],
+          "available": true,
+          "image": "/inventory/Collares/Collar-2.jpeg",
+          "category": "Collares"
+        },
+        {
+          "id": "Collares/Collar-3.jpeg",
+          "name": "Collar Clásico",
+          "price": 6000,
+          "description": "Diseño simple y elegante para el día a día.",
+          "tags": [],
+          "available": true,
+          "image": "/inventory/Collares/Collar-3.jpeg",
+          "category": "Collares"
+        },
+        {
+          "id": "Collares/Collar-4.jpeg",
+          "name": "Collar Premium",
+          "price": 7000,
+          "description": "Materiales de alta calidad y broche reforzado.",
+          "tags": [
+            "destacado"
+          ],
+          "available": true,
+          "image": "/inventory/Collares/Collar-4.jpeg",
+          "category": "Collares"
+        },
+        {
+          "id": "Collares/Collar-5.jpeg",
+          "name": "Collar Colores",
+          "price": 6000,
+          "description": "Estampado divertido para los más alegres.",
+          "tags": [],
+          "available": true,
+          "image": "/inventory/Collares/Collar-5.jpeg",
+          "category": "Collares"
+        },
+        {
+          "id": "Collares/Collar-6.jpeg",
+          "name": "Collar Urbano",
+          "price": 7000,
+          "description": "Estilo moderno para la ciudad.",
+          "tags": [],
+          "available": true,
+          "image": "/inventory/Collares/Collar-6.jpeg",
+          "category": "Collares"
+        },
+        {
+          "id": "Collares/Collar-7.jpeg",
+          "name": "Collar Suave",
+          "price": 6000,
+          "description": "Acolchado extra para máxima comodidad.",
+          "tags": [],
+          "available": true,
+          "image": "/inventory/Collares/Collar-7.jpeg",
+          "category": "Collares"
+        },
+        {
+          "id": "Collares/Collar-8.jpeg",
+          "name": "Collar Fuerte",
+          "price": 7000,
+          "description": "Pensado para mascotas grandes y enérgicas.",
+          "tags": [],
+          "available": true,
+          "image": "/inventory/Collares/Collar-8.jpeg",
+          "category": "Collares"
+        }
+      ]
+    }
+  ],
+  "generatedAt": "2026-06-16T21:20:03.140Z"
+}
