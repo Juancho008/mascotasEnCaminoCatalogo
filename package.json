@@ -11,6 +11,7 @@
     "build:static": "node scripts/build-static.mjs",
     "vercel-build": "node scripts/build-static.mjs && npm --prefix client install && npm --prefix client run build",
     "kv:sync": "node scripts/build-static.mjs && node scripts/sync-kv.mjs",
+    "hmac:test": "node scripts/test-hmac.mjs",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
     "start": "node server/index.js",

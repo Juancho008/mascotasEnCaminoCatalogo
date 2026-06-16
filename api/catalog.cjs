@@ -2,6 +2,13 @@ const crypto = require("crypto");
 
 const WORKER_PATH = "/catalog.json";
 
+function normalizeWorkerBase(url) {
+  return url
+    ?.trim()
+    .replace(/\/$/, "")
+    .replace(/\/catalog\.json$/i, "");
+}
+
 function createHmacHeaders(secret, method, pathname) {
   const timestamp = Date.now().toString();
   const payload = `${method.toUpperCase()}\n${pathname}\n${timestamp}`;
@@ -20,8 +27,8 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: "Método no permitido" });
   }
 
-  const workerBase = process.env.CATALOG_WORKER_URL?.replace(/\/$/, "");
-  const secret = process.env.CATALOG_HMAC_SECRET;
+  const workerBase = normalizeWorkerBase(process.env.CATALOG_WORKER_URL);
+  const secret = process.env.CATALOG_HMAC_SECRET?.trim();
 
   if (!workerBase || !secret) {
     return res.status(500).json({
@@ -42,7 +49,10 @@ module.exports = async (req, res) => {
         /* no JSON */
       }
       return res.status(response.status).json({
-        error: detail || "El Worker rechazó la solicitud",
+        error:
+          response.status === 401
+            ? "Firma HMAC rechazada por Cloudflare. Verificá que CATALOG_HMAC_SECRET sea idéntico en Vercel y Cloudflare, y que CATALOG_WORKER_URL sea solo el dominio del Worker (sin /catalog.json)."
+            : detail || "El Worker rechazó la solicitud",
       });
     }
 

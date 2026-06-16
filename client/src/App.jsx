@@ -52,7 +52,8 @@ async function fetchCatalog(url) {
 
     if (r.status === 401) {
       throw new Error(
-        "El catálogo requiere autenticación HMAC. En Vercel eliminá VITE_CATALOG_API y usá /api/catalog con CATALOG_WORKER_URL + CATALOG_HMAC_SECRET."
+        detail ||
+          "Firma HMAC rechazada. Verificá CATALOG_HMAC_SECRET (mismo valor en Vercel y Cloudflare) y CATALOG_WORKER_URL (solo dominio, sin /catalog.json)."
       );
     }
 
