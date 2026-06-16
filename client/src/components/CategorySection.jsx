@@ -14,8 +14,7 @@ export default function CategorySection({ category, site }) {
       <motion.div
         className="category-head"
         initial={{ opacity: 0, x: -16 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true, margin: "-60px" }}
+        animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4 }}
       >
         <h2 className="category-title">
@@ -31,8 +30,7 @@ export default function CategorySection({ category, site }) {
         className="product-grid"
         variants={gridVariants}
         initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "-40px" }}
+        animate="show"
       >
         {category.products.map((product) => (
           <ProductCard key={product.id} product={product} site={site} />
