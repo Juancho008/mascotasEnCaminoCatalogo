@@ -36,8 +36,26 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     fetch(catalogUrl)
-      .then((r) => {
-        if (!r.ok) throw new Error("No se pudo cargar el catálogo");
+      .then(async (r) => {
+        if (!r.ok) {
+          let detail = "";
+          try {
+            const body = await r.json();
+            detail = body.error || "";
+          } catch {
+            /* respuesta no JSON */
+          }
+
+          if (r.status === 401) {
+            throw new Error(
+              "El catálogo requiere autenticación HMAC. En Vercel eliminá VITE_CATALOG_API y usá /api/catalog con CATALOG_WORKER_URL + CATALOG_HMAC_SECRET."
+            );
+          }
+
+          throw new Error(
+            detail || `No se pudo cargar el catálogo (HTTP ${r.status})`
+          );
+        }
         return r.json();
       })
       .then((data) => {
