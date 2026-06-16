@@ -16,12 +16,11 @@
     "start": "node server/index.js",
     "install:all": "npm install && npm --prefix client install"
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
     "compression": "^1.7.5",
     "cors": "^2.8.5",
-    "express": "^4.21.2"
-  },
-  "devDependencies": {
+    "express": "^4.21.2",
     "concurrently": "^9.1.2",
     "wrangler": "^4.14.0"
   }

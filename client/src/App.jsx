@@ -38,6 +38,30 @@ function parseCatalogResponse(text) {
   }
 }
 
+async function fetchCatalog(url) {
+  const r = await fetch(url);
+  const text = await r.text();
+
+  if (!r.ok) {
+    let detail = "";
+    try {
+      detail = JSON.parse(text).error || "";
+    } catch {
+      detail = text.slice(0, 120);
+    }
+
+    if (r.status === 401) {
+      throw new Error(
+        "El catálogo requiere autenticación HMAC. En Vercel eliminá VITE_CATALOG_API y usá /api/catalog con CATALOG_WORKER_URL + CATALOG_HMAC_SECRET."
+      );
+    }
+
+    throw new Error(detail || `No se pudo cargar el catálogo (HTTP ${r.status})`);
+  }
+
+  return parseCatalogResponse(text);
+}
+
 export default function App() {
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState(null);
@@ -49,30 +73,14 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(catalogUrl)
-      .then(async (r) => {
-        const text = await r.text();
+    const fallbackUrl =
+      catalogUrl !== "/catalog.json" ? "/catalog.json" : null;
 
-        if (!r.ok) {
-          let detail = "";
-          try {
-            detail = JSON.parse(text).error || "";
-          } catch {
-            detail = text.slice(0, 120);
-          }
-
-          if (r.status === 401) {
-            throw new Error(
-              "El catálogo requiere autenticación HMAC. En Vercel eliminá VITE_CATALOG_API y usá /api/catalog con CATALOG_WORKER_URL + CATALOG_HMAC_SECRET."
-            );
-          }
-
-          throw new Error(
-            detail || `No se pudo cargar el catálogo (HTTP ${r.status})`
-          );
-        }
-
-        return parseCatalogResponse(text);
+    fetchCatalog(catalogUrl)
+      .catch((err) => {
+        if (!fallbackUrl) throw err;
+        console.warn("[catalog] API falló, usando catalog.json estático:", err.message);
+        return fetchCatalog(fallbackUrl);
       })
       .then((data) => {
         if (cancelled) return;

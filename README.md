@@ -347,7 +347,7 @@ curl -X PUT "https://TU-WORKER.workers.dev/api/catalog" \
 ├── client/                 ← frontend React (Vite + Framer Motion)
 │   └── src/
 ├── api/
-│   └── catalog.js          ← proxy Vercel con firma HMAC (secreto server-side)
+│   └── catalog.cjs         ← proxy Vercel con firma HMAC (secreto server-side)
 ├── lib/
 │   └── hmac.mjs            ← firma HMAC compartida (Vercel + Express local)
 ├── scripts/

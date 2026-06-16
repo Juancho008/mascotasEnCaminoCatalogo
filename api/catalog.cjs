@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+const crypto = require("crypto");
 
 const WORKER_PATH = "/catalog.json";
 
@@ -15,7 +15,7 @@ function createHmacHeaders(secret, method, pathname) {
   };
 }
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Método no permitido" });
   }
@@ -62,4 +62,4 @@ export default async function handler(req, res) {
     console.error("[api/catalog]", err);
     return res.status(502).json({ error: "No se pudo obtener el catálogo" });
   }
-}
+};
