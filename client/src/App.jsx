@@ -24,6 +24,20 @@ function applyTheme(theme = {}) {
   });
 }
 
+function parseCatalogResponse(text) {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.startsWith("<")) {
+    throw new Error(
+      "El servidor devolvió HTML en lugar de JSON. Verificá que /api/catalog esté desplegado en Vercel y que existan CATALOG_WORKER_URL y CATALOG_HMAC_SECRET."
+    );
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    throw new Error("Respuesta del catálogo no es JSON válido");
+  }
+}
+
 export default function App() {
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState(null);
@@ -37,13 +51,14 @@ export default function App() {
     let cancelled = false;
     fetch(catalogUrl)
       .then(async (r) => {
+        const text = await r.text();
+
         if (!r.ok) {
           let detail = "";
           try {
-            const body = await r.json();
-            detail = body.error || "";
+            detail = JSON.parse(text).error || "";
           } catch {
-            /* respuesta no JSON */
+            detail = text.slice(0, 120);
           }
 
           if (r.status === 401) {
@@ -56,7 +71,8 @@ export default function App() {
             detail || `No se pudo cargar el catálogo (HTTP ${r.status})`
           );
         }
-        return r.json();
+
+        return parseCatalogResponse(text);
       })
       .then((data) => {
         if (cancelled) return;
