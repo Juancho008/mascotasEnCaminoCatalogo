@@ -1,44 +1,44 @@
 {
   "Collares/Collar-1.jpeg": {
     "name": "Collar Aventura",
-    "price": 4500,
+    "price": 6000,
     "description": "Collar resistente ideal para paseos largos.",
     "tags": ["nuevo"]
   },
   "Collares/Collar-2.jpeg": {
     "name": "Collar Confort",
-    "price": 4500,
+    "price": 6000,
     "description": "Tejido suave que cuida el cuello de tu mascota."
   },
   "Collares/Collar-3.jpeg": {
     "name": "Collar Clásico",
-    "price": 4200,
+    "price": 6000,
     "description": "Diseño simple y elegante para el día a día."
   },
   "Collares/Collar-4.jpeg": {
     "name": "Collar Premium",
-    "price": 5200,
+    "price": 7000,
     "description": "Materiales de alta calidad y broche reforzado.",
     "tags": ["destacado"]
   },
   "Collares/Collar-5.jpeg": {
     "name": "Collar Colores",
-    "price": 4500,
+    "price": 6000,
     "description": "Estampado divertido para los más alegres."
   },
   "Collares/Collar-6.jpeg": {
     "name": "Collar Urbano",
-    "price": 4800,
+    "price": 7000,
     "description": "Estilo moderno para la ciudad."
   },
   "Collares/Collar-7.jpeg": {
     "name": "Collar Suave",
-    "price": 4300,
+    "price": 6000,
     "description": "Acolchado extra para máxima comodidad."
   },
   "Collares/Collar-8.jpeg": {
     "name": "Collar Fuerte",
-    "price": 5000,
+    "price": 7000,
     "description": "Pensado para mascotas grandes y enérgicas."
   }
 }
