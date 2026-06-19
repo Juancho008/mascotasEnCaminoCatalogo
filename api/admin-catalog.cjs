@@ -1,4 +1,4 @@
-const { workerFetch, checkAdminPassword } = require("../_worker-proxy.cjs");
+const { workerFetch, checkAdminPassword } = require("./_worker-proxy.cjs");
 
 async function readRawBody(req) {
   if (req.body) {
@@ -9,7 +9,16 @@ async function readRawBody(req) {
   return Buffer.concat(chunks).toString();
 }
 
+function sendOptions(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, PUT, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+  return res.status(204).end();
+}
+
 module.exports = async (req, res) => {
+  if (req.method === "OPTIONS") return sendOptions(res);
+
   const auth = checkAdminPassword(req);
   if (!auth.ok) {
     return res.status(auth.error.includes("Falta") ? 500 : 401).json({ error: auth.error });

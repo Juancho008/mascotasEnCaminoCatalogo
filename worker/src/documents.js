@@ -13,7 +13,7 @@ async function syncCatalogDocuments(env, docs) {
     id: d.id,
     title: d.title,
     filename: d.filename,
-    url: `/api/documents?id=${d.id}`,
+    url: `/api/pdfs?id=${d.id}`,
     uploadedAt: d.uploadedAt,
   }));
   catalog.generatedAt = new Date().toISOString();
@@ -40,7 +40,7 @@ export async function handleDocumentsList(env, corsHeaders) {
         title: d.title,
         filename: d.filename,
         uploadedAt: d.uploadedAt,
-        url: `/api/documents?id=${d.id}`,
+        url: `/api/pdfs?id=${d.id}`,
       }))
     ),
     {
@@ -73,32 +73,61 @@ function isAdmin(request, env) {
   return Boolean(env.ADMIN_TOKEN && token === env.ADMIN_TOKEN);
 }
 
-/** POST /api/admin/documents — subir PDF */
+/** POST /api/admin/documents — subir PDF (multipart o JSON base64) */
 export async function handleDocumentUpload(request, env, json, corsHeaders) {
   if (!isAdmin(request, env)) {
     return json({ error: "No autorizado" }, 401);
   }
 
-  let formData;
-  try {
-    formData = await request.formData();
-  } catch {
-    return json({ error: "Formato inválido" }, 400);
+  const contentType = request.headers.get("Content-Type") || "";
+  let title;
+  let filename;
+  let buffer;
+
+  if (contentType.includes("application/json")) {
+    let payload;
+    try {
+      payload = await request.json();
+    } catch {
+      return json({ error: "JSON inválido" }, 400);
+    }
+
+    title = (payload.title || payload.filename || "Catálogo PDF").toString();
+    filename = (payload.filename || "catalogo.pdf").toString();
+    if (!payload.data) {
+      return json({ error: "Falta el campo data (PDF en base64)" }, 400);
+    }
+
+    try {
+      const binary = Uint8Array.from(atob(payload.data), (c) => c.charCodeAt(0));
+      buffer = binary.buffer;
+    } catch {
+      return json({ error: "Base64 inválido" }, 400);
+    }
+  } else {
+    let formData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return json({ error: "Formato inválido" }, 400);
+    }
+
+    const file = formData.get("file");
+    title = (formData.get("title") || file?.name || "Catálogo PDF").toString();
+
+    if (!file || typeof file === "string") {
+      return json({ error: "Seleccioná un archivo PDF" }, 400);
+    }
+
+    const mime = file.type || "application/octet-stream";
+    if (mime !== "application/pdf") {
+      return json({ error: "Solo se permiten archivos PDF" }, 400);
+    }
+
+    filename = file.name || "catalogo.pdf";
+    buffer = await file.arrayBuffer();
   }
 
-  const file = formData.get("file");
-  const title = (formData.get("title") || file?.name || "Catálogo PDF").toString();
-
-  if (!file || typeof file === "string") {
-    return json({ error: "Seleccioná un archivo PDF" }, 400);
-  }
-
-  const mime = file.type || "application/octet-stream";
-  if (mime !== "application/pdf") {
-    return json({ error: "Solo se permiten archivos PDF" }, 400);
-  }
-
-  const buffer = await file.arrayBuffer();
   const maxBytes = 10 * 1024 * 1024;
   if (buffer.byteLength > maxBytes) {
     return json({ error: "El PDF no puede superar 10 MB" }, 400);
@@ -109,7 +138,7 @@ export async function handleDocumentUpload(request, env, json, corsHeaders) {
   const entry = {
     id,
     title,
-    filename: file.name || "catalogo.pdf",
+    filename,
     size: buffer.byteLength,
     uploadedAt: new Date().toISOString(),
   };

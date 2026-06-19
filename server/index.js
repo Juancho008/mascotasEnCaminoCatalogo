@@ -75,7 +75,7 @@ function workerBaseUrl() {
   return process.env.CATALOG_WORKER_URL?.trim().replace(/\/$/, "").replace(/\/catalog\.json$/i, "");
 }
 
-app.get("/api/documents", async (req, res) => {
+app.get("/api/pdfs", async (req, res) => {
   const base = workerBaseUrl();
   if (!base) return res.json([]);
   const id = req.query.id;
@@ -121,30 +121,26 @@ app.put("/api/admin/catalog", express.json({ limit: "12mb" }), async (req, res) 
   res.status(response.status).type("json").send(body);
 });
 
-app.post(
-  "/api/admin/documents",
-  express.raw({ type: () => true, limit: "12mb" }),
-  async (req, res) => {
-    if (!checkAdmin(req, res)) return;
-    const base = workerBaseUrl();
-    const adminToken = process.env.ADMIN_TOKEN?.trim();
-    if (!base || !adminToken) {
-      return res.status(500).json({ error: "Faltan CATALOG_WORKER_URL o ADMIN_TOKEN" });
-    }
-    const response = await fetch(`${base}/api/admin/documents`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        "Content-Type": req.headers["content-type"] || "multipart/form-data",
-      },
-      body: req.body,
-    });
-    const body = await response.text();
-    res.status(response.status).type("json").send(body);
+app.post("/api/admin/upload-pdf", express.json({ limit: "15mb" }), async (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const base = workerBaseUrl();
+  const adminToken = process.env.ADMIN_TOKEN?.trim();
+  if (!base || !adminToken) {
+    return res.status(500).json({ error: "Faltan CATALOG_WORKER_URL o ADMIN_TOKEN" });
   }
-);
+  const response = await fetch(`${base}/api/admin/documents`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(req.body),
+  });
+  const body = await response.text();
+  res.status(response.status).type("json").send(body);
+});
 
-app.delete("/api/admin/documents", async (req, res) => {
+app.delete("/api/admin/upload-pdf", async (req, res) => {
   if (!checkAdmin(req, res)) return;
   const base = workerBaseUrl();
   const adminToken = process.env.ADMIN_TOKEN?.trim();

@@ -20,7 +20,7 @@ export default function DocumentsSection({ documents = [] }) {
             <li key={doc.id}>
               <a
                 className="documents-link"
-                href={doc.url || `/api/documents?id=${doc.id}`}
+                href={doc.url || `/api/pdfs?id=${doc.id}`}
                 target="_blank"
                 rel="noreferrer"
               >

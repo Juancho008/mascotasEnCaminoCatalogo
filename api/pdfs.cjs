@@ -1,6 +1,12 @@
 const { getWorkerConfig } = require("./_worker-proxy.cjs");
 
 module.exports = async (req, res) => {
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    return res.status(204).end();
+  }
+
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Método no permitido" });
   }
@@ -24,7 +30,7 @@ module.exports = async (req, res) => {
     }
     return res.status(response.status).send(Buffer.from(body));
   } catch (err) {
-    console.error("[documents]", err);
+    console.error("[pdfs]", err);
     return res.status(502).json({ error: "No se pudo obtener el documento" });
   }
 };

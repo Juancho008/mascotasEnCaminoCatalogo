@@ -2,22 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "builds": [
-    {
-      "src": "api/catalog.cjs",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/documents.cjs",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/admin/catalog.cjs",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/admin/documents.cjs",
-      "use": "@vercel/node"
-    },
+    { "src": "api/catalog.cjs", "use": "@vercel/node" },
+    { "src": "api/pdfs.cjs", "use": "@vercel/node" },
+    { "src": "api/admin-catalog.cjs", "use": "@vercel/node" },
+    { "src": "api/admin-upload.cjs", "use": "@vercel/node" },
     {
       "src": "package.json",
       "use": "@vercel/static-build",
@@ -25,10 +13,10 @@
     }
   ],
   "routes": [
+    { "src": "/api/admin/upload-pdf", "dest": "/api/admin-upload.cjs" },
+    { "src": "/api/admin/catalog", "dest": "/api/admin-catalog.cjs" },
     { "src": "/api/catalog", "dest": "/api/catalog.cjs" },
-    { "src": "/api/documents", "dest": "/api/documents.cjs" },
-    { "src": "/api/admin/catalog", "dest": "/api/admin/catalog.cjs" },
-    { "src": "/api/admin/documents", "dest": "/api/admin/documents.cjs" },
+    { "src": "/api/pdfs", "dest": "/api/pdfs.cjs" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

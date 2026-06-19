@@ -66,11 +66,23 @@ export default function AdminPanel() {
 
   async function loadDocuments() {
     try {
-      const r = await fetch("/api/documents");
+      const r = await fetch("/api/pdfs");
       if (r.ok) setDocuments(await r.json());
     } catch {
       /* ignorar */
     }
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
   async function uploadPdf(e) {
@@ -83,16 +95,21 @@ export default function AdminPanel() {
     setMessage("");
     setLoading(true);
     try {
-      const form = new FormData();
-      form.append("file", pdfFile);
-      form.append("title", pdfTitle || pdfFile.name);
-      const r = await fetch("/api/admin/documents", {
+      const data = await fileToBase64(pdfFile);
+      const r = await fetch("/api/admin/upload-pdf", {
         method: "POST",
-        headers: authHeaders(token),
-        body: form,
+        headers: {
+          ...authHeaders(token),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: pdfTitle || pdfFile.name.replace(/\.pdf$/i, ""),
+          filename: pdfFile.name,
+          data,
+        }),
       });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || "Error al subir");
+      const resData = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(resData.error || "Error al subir");
       setMessage("PDF subido correctamente");
       setPdfFile(null);
       setPdfTitle("");
@@ -111,7 +128,7 @@ export default function AdminPanel() {
     setLoading(true);
     setError("");
     try {
-      const r = await fetch(`/api/admin/documents?id=${encodeURIComponent(id)}`, {
+      const r = await fetch(`/api/admin/upload-pdf?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
         headers: authHeaders(token),
       });
@@ -257,7 +274,7 @@ export default function AdminPanel() {
                       <span>{doc.filename}</span>
                     </div>
                     <div className="admin-doc-actions">
-                      <a href={`/api/documents?id=${doc.id}`} target="_blank" rel="noreferrer">
+                      <a href={`/api/pdfs?id=${doc.id}`} target="_blank" rel="noreferrer">
                         Ver
                       </a>
                       <button type="button" onClick={() => deletePdf(doc.id)}>
