@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Header from "./components/Header.jsx";
 import Hero from "./components/Hero.jsx";
 import CategoryNav from "./components/CategoryNav.jsx";
-import CategorySection from "./components/CategorySection.jsx";
+import CatalogGroupedView from "./components/CatalogGroupedView.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
 import Footer from "./components/Footer.jsx";
 import Loader from "./components/Loader.jsx";
@@ -169,13 +169,10 @@ export default function App() {
                 <p>No encontramos productos para “{query}”.</p>
               </motion.div>
             ) : (
-              filteredCategories.map((category) => (
-                <CategorySection
-                  key={category.id}
-                  category={category}
-                  site={site}
-                />
-              ))
+              <CatalogGroupedView
+                categories={filteredCategories}
+                site={site}
+              />
             )}
           </AnimatePresence>
         </div>

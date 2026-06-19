@@ -154,6 +154,76 @@ app.delete("/api/admin/upload-pdf", async (req, res) => {
   res.status(response.status).type("json").send(body);
 });
 
+app.post("/api/admin/import-pdf", express.json({ limit: "15mb" }), async (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  try {
+    const { createRequire } = await import("node:module");
+    const require = createRequire(import.meta.url);
+    const pdfParse = require("pdf-parse");
+    const { parsePriceListText, mergeImportedCatalog } = await import(
+      "../lib/pdf-price-parser.mjs"
+    );
+
+    const { data, action = "preview", replace = true } = req.body || {};
+    if (!data) return res.status(400).json({ error: "Falta el PDF en base64" });
+
+    const buffer = Buffer.from(data, "base64");
+    const pdf = await pdfParse(buffer);
+    const parsed = parsePriceListText(pdf.text);
+
+    if (!parsed.totalProducts) {
+      return res.status(422).json({
+        error: "No se detectaron productos en el PDF",
+        textSample: pdf.text.slice(0, 800),
+      });
+    }
+
+    if (action === "preview") {
+      return res.json({
+        ok: true,
+        preview: true,
+        brand: parsed.brand,
+        totalProducts: parsed.totalProducts,
+        categories: parsed.categories.map((c) => ({
+          id: c.id,
+          label: c.label,
+          productCount: c.products.length,
+          products: c.products.slice(0, 5),
+        })),
+      });
+    }
+
+    const base = workerBaseUrl();
+    const secret = process.env.CATALOG_HMAC_SECRET?.trim();
+    const adminToken = process.env.ADMIN_TOKEN?.trim();
+    if (!base || !secret || !adminToken) {
+      return res.status(500).json({ error: "Faltan variables de Cloudflare en .env" });
+    }
+
+    const headers = createHmacHeaders(secret, "GET", "/catalog.json");
+    const catalogRes = await fetch(`${base}/catalog.json`, { headers });
+    const catalogText = await catalogRes.text();
+    if (!catalogRes.ok) {
+      return res.status(catalogRes.status).json({ error: "No se pudo leer el catálogo" });
+    }
+
+    const merged = mergeImportedCatalog(JSON.parse(catalogText), parsed, { replace });
+    const saveRes = await fetch(`${base}/api/catalog`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(merged),
+    });
+    const saveBody = await saveRes.text();
+    res.status(saveRes.status).type("json").send(saveBody);
+  } catch (err) {
+    console.error("[api/admin/import-pdf]", err);
+    res.status(500).json({ error: err.message || "Error al importar PDF" });
+  }
+});
+
 // Imágenes del inventario (las que se usan como productos).
 app.use(
   "/inventory",

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import CatalogEditor from "./components/CatalogEditor.jsx";
+import { catalogToGroups, groupsToCatalog } from "./utils/catalogGroups.js";
 
 const STORAGE_KEY = "mec_admin_token";
 
@@ -9,7 +11,7 @@ function authHeaders(token) {
 export default function AdminPanel() {
   const [token, setToken] = useState(() => sessionStorage.getItem(STORAGE_KEY) || "");
   const [password, setPassword] = useState("");
-  const [tab, setTab] = useState("pdf");
+  const [tab, setTab] = useState("import");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,7 +20,10 @@ export default function AdminPanel() {
   const [pdfFile, setPdfFile] = useState(null);
   const [documents, setDocuments] = useState([]);
 
-  const [catalogJson, setCatalogJson] = useState("");
+  const [editorState, setEditorState] = useState(null);
+
+  const [importFile, setImportFile] = useState(null);
+  const [importPreview, setImportPreview] = useState(null);
 
   useEffect(() => {
     if (!token) return;
@@ -51,7 +56,7 @@ export default function AdminPanel() {
   function logout() {
     sessionStorage.removeItem(STORAGE_KEY);
     setToken("");
-    setCatalogJson("");
+    setEditorState(null);
     setDocuments([]);
   }
 
@@ -60,7 +65,7 @@ export default function AdminPanel() {
     const text = await r.text();
     if (!r.ok) throw new Error("No se pudo cargar el catálogo");
     const data = JSON.parse(text);
-    setCatalogJson(JSON.stringify(data, null, 2));
+    setEditorState(catalogToGroups(data));
     setDocuments(data.documents || []);
   }
 
@@ -83,6 +88,72 @@ export default function AdminPanel() {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  }
+
+  async function analyzeImportPdf(e) {
+    e.preventDefault();
+    if (!importFile) {
+      setError("Seleccioná el PDF de precios");
+      return;
+    }
+    setError("");
+    setMessage("");
+    setImportPreview(null);
+    setLoading(true);
+    try {
+      const data = await fileToBase64(importFile);
+      const r = await fetch("/api/admin/import-pdf", {
+        method: "POST",
+        headers: {
+          ...authHeaders(token),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ data, action: "preview" }),
+      });
+      const resData = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(resData.error || "No se pudo leer el PDF");
+      setImportPreview(resData);
+      setMessage(
+        `Detectados ${resData.totalProducts} productos en ${resData.categories?.length || 0} categorías`
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmImportPdf() {
+    if (!importFile) return;
+    setError("");
+    setMessage("");
+    setLoading(true);
+    try {
+      const data = await fileToBase64(importFile);
+      const r = await fetch("/api/admin/import-pdf", {
+        method: "POST",
+        headers: {
+          ...authHeaders(token),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ data, action: "import", replace: true }),
+      });
+      const resData = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(resData.error || "No se pudo importar");
+      const n = resData.imported?.totalProducts || importPreview?.totalProducts;
+      setMessage(
+        n
+          ? `Importados ${n} productos en Cloudflare. ¡Revisá la tienda!`
+          : "Catálogo importado en Cloudflare"
+      );
+      setImportPreview(null);
+      setImportFile(null);
+      await loadCatalog();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function uploadPdf(e) {
@@ -144,20 +215,19 @@ export default function AdminPanel() {
     }
   }
 
-  async function saveCatalog(e) {
-    e.preventDefault();
+  async function saveCatalog() {
     setError("");
     setMessage("");
     setLoading(true);
     try {
-      const parsed = JSON.parse(catalogJson);
+      const payload = groupsToCatalog({ ...editorState, documents });
       const r = await fetch("/api/admin/catalog", {
         method: "PUT",
         headers: {
           ...authHeaders(token),
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(parsed),
+        body: JSON.stringify(payload),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || "No se pudo guardar");
@@ -215,29 +285,93 @@ export default function AdminPanel() {
         <nav className="admin-tabs">
           <button
             type="button"
-            className={tab === "pdf" ? "active" : ""}
-            onClick={() => setTab("pdf")}
+            className={tab === "import" ? "active" : ""}
+            onClick={() => setTab("import")}
           >
-            📄 Catálogos PDF
+            📥 Importar lista PDF
           </button>
           <button
             type="button"
-            className={tab === "json" ? "active" : ""}
-            onClick={() => setTab("json")}
+            className={tab === "pdf" ? "active" : ""}
+            onClick={() => setTab("pdf")}
           >
-            📦 Editar catálogo (JSON)
+            📄 Publicar PDF
+          </button>
+          <button
+            type="button"
+            className={tab === "catalog" ? "active" : ""}
+            onClick={() => setTab("catalog")}
+          >
+            ✏️ Editar catálogo
           </button>
         </nav>
 
         {message && <p className="admin-success">{message}</p>}
         {error && <p className="admin-error">{error}</p>}
 
+        {tab === "import" && (
+          <section className="admin-card">
+            <h2>Importar productos desde lista de precios (PDF)</h2>
+            <p className="admin-hint">
+              Subí un PDF como el de <strong>Molino Seda</strong>: detectamos código, descripción y precio,
+              creamos la categoría <strong>Alimento balanceado</strong> con subcategorías (ESTAMPA, VAGONETA, etc.).
+            </p>
+            <form onSubmit={analyzeImportPdf} className="admin-form">
+              <label>
+                PDF de lista de precios (máx. 10 MB)
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => {
+                    setImportFile(e.target.files?.[0] || null);
+                    setImportPreview(null);
+                  }}
+                />
+              </label>
+              <button type="submit" disabled={loading}>
+                {loading ? "Analizando…" : "Analizar PDF"}
+              </button>
+            </form>
+
+            {importPreview && (
+              <div className="admin-preview">
+                <h3>Vista previa</h3>
+                {importPreview.brand && (
+                  <p>
+                    <strong>Marca:</strong> {importPreview.brand}
+                  </p>
+                )}
+                <ul className="admin-preview-list">
+                  {importPreview.categories?.map((cat) => (
+                    <li key={cat.id}>
+                      <strong>{cat.label}</strong> — {cat.productCount} producto(s)
+                      {cat.products?.[0] && (
+                        <span>
+                          {" "}
+                          ej: {cat.products[0].name} (${cat.products[0].price})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  className="admin-import-btn"
+                  onClick={confirmImportPdf}
+                  disabled={loading}
+                >
+                  {loading ? "Importando…" : "Importar al catálogo en Cloudflare"}
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
         {tab === "pdf" && (
           <section className="admin-card">
-            <h2>Subir catálogo en PDF</h2>
+            <h2>Publicar PDF para descarga</h2>
             <p className="admin-hint">
-              El PDF queda guardado en Cloudflare y tus clientes pueden descargarlo desde la tienda.
-              Para agregar productos con precios, usá la pestaña JSON o editá <code>config/products.json</code> y corré <code>npm run kv:sync</code>.
+              Solo guarda el PDF para que tus clientes lo descarguen. Para cargar productos al sitio, usá <strong>Importar lista PDF</strong>.
             </p>
             <form onSubmit={uploadPdf} className="admin-form">
               <label>
@@ -288,27 +422,13 @@ export default function AdminPanel() {
           </section>
         )}
 
-        {tab === "json" && (
-          <section className="admin-card">
-            <h2>Editar catálogo completo</h2>
-            <p className="admin-hint">
-              Modificá productos, precios, WhatsApp y más. Al guardar se actualiza Cloudflare KV al instante.
-            </p>
-            <form onSubmit={saveCatalog} className="admin-form">
-              <label>
-                JSON del catálogo
-                <textarea
-                  value={catalogJson}
-                  onChange={(e) => setCatalogJson(e.target.value)}
-                  rows={22}
-                  spellCheck={false}
-                />
-              </label>
-              <button type="submit" disabled={loading}>
-                {loading ? "Guardando…" : "Guardar en Cloudflare"}
-              </button>
-            </form>
-          </section>
+        {tab === "catalog" && editorState && (
+          <CatalogEditor
+            editorState={editorState}
+            onChange={setEditorState}
+            onSave={saveCatalog}
+            loading={loading}
+          />
         )}
       </div>
     </div>

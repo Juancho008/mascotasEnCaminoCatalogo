@@ -8,16 +8,19 @@ const gridVariants = {
   },
 };
 
-export default function CategorySection({ category, site }) {
+export default function CategorySection({ category, site, isSubcategory = false }) {
   return (
-    <section className="category-section" id={`cat-${category.id}`}>
+    <section
+      className={`category-section${isSubcategory ? " category-section-sub" : ""}`}
+      id={`cat-${category.id}`}
+    >
       <motion.div
         className="category-head"
         initial={{ opacity: 0, x: -16 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <h2 className="category-title">
+        <h2 className={`category-title${isSubcategory ? " category-title-sub" : ""}`}>
           <span className="category-emoji">{category.emoji}</span>
           {category.label}
         </h2>
