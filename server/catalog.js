@@ -127,6 +127,7 @@ export function buildCatalog() {
       theme: site.theme || {},
     },
     categories,
+    documents: [],
     generatedAt: new Date().toISOString(),
   };
 }

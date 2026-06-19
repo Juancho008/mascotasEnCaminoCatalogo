@@ -1,20 +1,22 @@
 /**
  * API del catálogo en Cloudflare Workers + KV.
- *
- * GET  /catalog.json  → lee el catálogo desde KV (requiere HMAC si hay secret)
- * GET  /api/catalog   → mismo contenido (alias)
- * PUT  /api/catalog   → actualiza el catálogo (requiere ADMIN_TOKEN)
- * GET  /api/health    → estado del servicio
  */
 
 import { verifyHmac } from "./hmac.js";
+import {
+  handleDocumentDelete,
+  handleDocumentDownload,
+  handleDocumentUpload,
+  handleDocumentsList,
+} from "./documents.js";
 
 const CATALOG_KEY = "catalog";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Timestamp, X-Signature",
+  "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, X-Timestamp, X-Signature",
 };
 
 function json(data, status = 200, extra = {}) {
@@ -46,6 +48,24 @@ export default {
       return json({ ok: true, kv: true, hasCatalog, hmacEnabled });
     }
 
+    if (request.method === "GET" && url.pathname === "/api/documents") {
+      return handleDocumentsList(env, corsHeaders);
+    }
+
+    const docMatch = url.pathname.match(/^\/api\/documents\/([^/]+)$/);
+    if (request.method === "GET" && docMatch) {
+      return handleDocumentDownload(env, docMatch[1], corsHeaders);
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/admin/documents") {
+      return handleDocumentUpload(request, env, json, corsHeaders);
+    }
+
+    const adminDocMatch = url.pathname.match(/^\/api\/admin\/documents\/([^/]+)$/);
+    if (request.method === "DELETE" && adminDocMatch) {
+      return handleDocumentDelete(request, env, adminDocMatch[1], json);
+    }
+
     if (!isCatalogPath(url.pathname)) {
       return json({ error: "Ruta no encontrada" }, 404);
     }
@@ -59,9 +79,7 @@ export default {
       const raw = await env.KV_BINDING.get(CATALOG_KEY);
       if (!raw) {
         return json(
-          {
-            error: "Catálogo no encontrado en KV. Ejecutá: npm run kv:sync",
-          },
+          { error: "Catálogo no encontrado en KV. Ejecutá: npm run kv:sync" },
           404
         );
       }

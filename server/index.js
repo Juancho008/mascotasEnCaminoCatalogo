@@ -57,6 +57,107 @@ app.get("/api/catalog", async (req, res) => {
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
+function checkAdmin(req, res) {
+  const expected = process.env.ADMIN_PASSWORD?.trim();
+  if (!expected) {
+    res.status(500).json({ error: "Falta ADMIN_PASSWORD en .env" });
+    return false;
+  }
+  const token = req.headers.authorization?.replace(/^Bearer\s+/i, "");
+  if (token !== expected) {
+    res.status(401).json({ error: "Contraseña incorrecta" });
+    return false;
+  }
+  return true;
+}
+
+function workerBaseUrl() {
+  return process.env.CATALOG_WORKER_URL?.trim().replace(/\/$/, "").replace(/\/catalog\.json$/i, "");
+}
+
+app.get("/api/documents", async (req, res) => {
+  const base = workerBaseUrl();
+  if (!base) return res.json([]);
+  const id = req.query.id;
+  const path = id ? `/api/documents/${id}` : "/api/documents";
+  try {
+    const response = await fetch(`${base}${path}`);
+    const type = response.headers.get("content-type") || "application/json";
+    const body = Buffer.from(await response.arrayBuffer());
+    res.status(response.status).type(type).send(body);
+  } catch (err) {
+    console.error("[api/documents]", err);
+    res.status(502).json({ error: "No se pudo obtener el documento" });
+  }
+});
+
+app.get("/api/admin/catalog", async (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const base = workerBaseUrl();
+  const secret = process.env.CATALOG_HMAC_SECRET?.trim();
+  if (!base || !secret) return sendCatalog(req, res);
+  const headers = createHmacHeaders(secret, "GET", "/catalog.json");
+  const response = await fetch(`${base}/catalog.json`, { headers });
+  const body = await response.text();
+  res.status(response.status).type("json").send(body);
+});
+
+app.put("/api/admin/catalog", express.json({ limit: "12mb" }), async (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const base = workerBaseUrl();
+  const adminToken = process.env.ADMIN_TOKEN?.trim();
+  if (!base || !adminToken) {
+    return res.status(500).json({ error: "Faltan CATALOG_WORKER_URL o ADMIN_TOKEN" });
+  }
+  const response = await fetch(`${base}/api/catalog`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(req.body),
+  });
+  const body = await response.text();
+  res.status(response.status).type("json").send(body);
+});
+
+app.post(
+  "/api/admin/documents",
+  express.raw({ type: () => true, limit: "12mb" }),
+  async (req, res) => {
+    if (!checkAdmin(req, res)) return;
+    const base = workerBaseUrl();
+    const adminToken = process.env.ADMIN_TOKEN?.trim();
+    if (!base || !adminToken) {
+      return res.status(500).json({ error: "Faltan CATALOG_WORKER_URL o ADMIN_TOKEN" });
+    }
+    const response = await fetch(`${base}/api/admin/documents`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        "Content-Type": req.headers["content-type"] || "multipart/form-data",
+      },
+      body: req.body,
+    });
+    const body = await response.text();
+    res.status(response.status).type("json").send(body);
+  }
+);
+
+app.delete("/api/admin/documents", async (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const base = workerBaseUrl();
+  const adminToken = process.env.ADMIN_TOKEN?.trim();
+  const id = req.query.id;
+  if (!id) return res.status(400).json({ error: "Falta id" });
+  const response = await fetch(`${base}/api/admin/documents/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  const body = await response.text();
+  res.status(response.status).type("json").send(body);
+});
+
 // Imágenes del inventario (las que se usan como productos).
 app.use(
   "/inventory",

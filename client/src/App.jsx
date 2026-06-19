@@ -7,6 +7,13 @@ import CategorySection from "./components/CategorySection.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
 import Footer from "./components/Footer.jsx";
 import Loader from "./components/Loader.jsx";
+import AdminPanel from "./AdminPanel.jsx";
+import DocumentsSection from "./components/DocumentsSection.jsx";
+
+const isAdminRoute =
+  typeof window !== "undefined" &&
+  (window.location.pathname === "/admin" ||
+    window.location.pathname.startsWith("/admin/"));
 
 function applyTheme(theme = {}) {
   const root = document.documentElement;
@@ -64,6 +71,7 @@ async function fetchCatalog(url) {
 }
 
 export default function App() {
+  if (isAdminRoute) return <AdminPanel />;
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -137,6 +145,8 @@ export default function App() {
 
       <main>
         <Hero site={site} />
+
+        <DocumentsSection documents={catalog.documents} />
 
         <CategoryNav
           categories={catalog.categories}

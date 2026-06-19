@@ -7,6 +7,18 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/documents.cjs",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/admin/catalog.cjs",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/admin/documents.cjs",
+      "use": "@vercel/node"
+    },
+    {
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": { "distDir": "client/dist" }
@@ -14,6 +26,9 @@
   ],
   "routes": [
     { "src": "/api/catalog", "dest": "/api/catalog.cjs" },
+    { "src": "/api/documents", "dest": "/api/documents.cjs" },
+    { "src": "/api/admin/catalog", "dest": "/api/admin/catalog.cjs" },
+    { "src": "/api/admin/documents", "dest": "/api/admin/documents.cjs" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

@@ -331,6 +331,45 @@ curl -X PUT "https://TU-WORKER.workers.dev/api/catalog" \
 
 ---
 
+## 🔐 Panel de administración (`/admin`)
+
+Podés gestionar el catálogo desde el navegador sin usar la terminal.
+
+### URL
+
+```
+https://TU-SITIO.vercel.app/admin
+```
+
+### Configuración requerida
+
+**Cloudflare** (una vez):
+
+```bash
+npx wrangler secret put ADMIN_TOKEN
+npm run worker:deploy
+```
+
+**Vercel** → Environment Variables:
+
+| Key | Value |
+|-----|-------|
+| `ADMIN_PASSWORD` | contraseña que escribís en `/admin` |
+| `ADMIN_TOKEN` | **el mismo valor** que en Cloudflare |
+
+También necesitás `CATALOG_WORKER_URL` y `CATALOG_HMAC_SECRET` (ya configurados).
+
+### Qué podés hacer
+
+| Pestaña | Función |
+|---------|---------|
+| **Catálogos PDF** | Subir PDFs (máx. 10 MB) → se guardan en Cloudflare KV y aparecen en la tienda para descargar |
+| **Editar catálogo (JSON)** | Cambiar productos, precios, WhatsApp → guarda directo en KV |
+
+> **Nota:** Los PDFs se publican como documentos descargables. Para **importar productos automáticamente desde un PDF** haría falta un lector especial (no incluido). Para productos con fotos, seguí usando `config/products.json` + imágenes en `src/`, o editá el JSON en el panel.
+
+---
+
 ## 📁 Estructura del proyecto
 
 ```
