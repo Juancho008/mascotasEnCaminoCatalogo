@@ -48,7 +48,10 @@ function parseCatalogResponse(text) {
 }
 
 async function fetchCatalog(url) {
-  const r = await fetch(url);
+  const r = await fetch(url, {
+    cache: "no-store",
+    headers: { "Cache-Control": "no-cache" },
+  });
   const text = await r.text();
 
   if (!r.ok) {
@@ -88,30 +91,47 @@ export default function App() {
     const fallbackUrl =
       catalogUrl !== "/catalog.json" ? "/catalog.json" : null;
 
-    fetchCatalog(catalogUrl)
-      .catch((err) => {
-        if (!fallbackUrl) throw err;
-        console.warn("[catalog] API falló, usando catalog.json estático:", err.message);
-        return fetchCatalog(fallbackUrl);
-      })
-      .then((data) => {
-        if (cancelled) return;
-        const catalogData = sanitizeCatalog(data);
-        setCatalog(catalogData);
-        applyTheme(catalogData.site?.theme);
-        if (catalogData.site?.storeName) document.title = catalogData.site.storeName;
-        const groups = getCatalogNavGroups(
-          catalogData.categories.filter(isCategoryEnabled)
-        );
-        if (groups.length) {
-          const first = groups[0];
-          setActiveGroupKey(first.key);
-          setActiveSubId(first.hasMultiple ? first.categories[0]?.id : null);
-        }
-      })
-      .catch((err) => !cancelled && setError(err.message));
+    function applyCatalog(data) {
+      const catalogData = sanitizeCatalog(data);
+      setCatalog(catalogData);
+      setError(null);
+      applyTheme(catalogData.site?.theme);
+      if (catalogData.site?.storeName) document.title = catalogData.site.storeName;
+      const groups = getCatalogNavGroups(
+        catalogData.categories.filter(isCategoryEnabled)
+      );
+      if (groups.length) {
+        const first = groups[0];
+        setActiveGroupKey(first.key);
+        setActiveSubId(first.hasMultiple ? first.categories[0]?.id : null);
+      }
+    }
+
+    function loadCatalog() {
+      return fetchCatalog(catalogUrl)
+        .catch((err) => {
+          if (!fallbackUrl) throw err;
+          console.warn("[catalog] API falló, usando catalog.json estático:", err.message);
+          return fetchCatalog(fallbackUrl);
+        })
+        .then((data) => {
+          if (!cancelled) applyCatalog(data);
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err.message);
+        });
+    }
+
+    loadCatalog();
+
+    function onVisible() {
+      if (document.visibilityState === "visible") loadCatalog();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [catalogUrl]);
 

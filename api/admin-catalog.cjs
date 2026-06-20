@@ -29,6 +29,7 @@ module.exports = async (req, res) => {
       const response = await workerFetch("/catalog.json", { method: "GET", useHmac: true });
       const body = await response.text();
       res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store, must-revalidate");
       return res.status(response.status).send(body);
     } catch (err) {
       console.error("[admin/catalog GET]", err);

@@ -65,7 +65,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    res.setHeader("Cache-Control", "public, max-age=60");
+    res.setHeader("Cache-Control", "no-store, must-revalidate");
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.status(200).send(body);
   } catch (err) {

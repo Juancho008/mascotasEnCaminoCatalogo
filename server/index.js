@@ -41,7 +41,7 @@ app.get("/api/catalog", async (req, res) => {
       const body = await response.text();
       res
         .status(response.status)
-        .set("Cache-Control", "public, max-age=60")
+        .set("Cache-Control", "no-store, must-revalidate")
         .type("json")
         .send(body);
       return;

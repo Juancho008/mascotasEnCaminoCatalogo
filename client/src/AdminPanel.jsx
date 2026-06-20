@@ -161,7 +161,7 @@ export default function AdminPanel() {
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || "No se pudo guardar");
-      setMessage("Catálogo guardado en Cloudflare");
+      setMessage("Catálogo guardado en Cloudflare. Abrí la tienda en una pestaña nueva para ver los cambios.");
       await loadCatalog();
     } catch (err) {
       setError(err.message);
@@ -205,7 +205,9 @@ export default function AdminPanel() {
             <p>Importá productos desde PDF y editá el catálogo</p>
           </div>
           <div className="admin-header-actions">
-            <a href="/">Ver tienda</a>
+            <a href="/" target="_blank" rel="noreferrer">
+              Ver tienda
+            </a>
             <button type="button" className="admin-btn-ghost" onClick={logout}>
               Salir
             </button>

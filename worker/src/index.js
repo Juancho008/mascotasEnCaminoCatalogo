@@ -101,7 +101,7 @@ export default {
       return new Response(raw, {
         headers: {
           "Content-Type": "application/json; charset=utf-8",
-          "Cache-Control": "public, max-age=60",
+          "Cache-Control": "no-store, must-revalidate",
           ...corsHeaders,
         },
       });
