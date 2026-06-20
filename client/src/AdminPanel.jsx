@@ -313,8 +313,8 @@ export default function AdminPanel() {
           <section className="admin-card">
             <h2>Importar productos desde lista de precios (PDF)</h2>
             <p className="admin-hint">
-              Subí un PDF como el de <strong>Molino Seda</strong>: detectamos código, descripción y precio,
-              creamos la categoría <strong>Alimento balanceado</strong> con subcategorías (ESTAMPA, VAGONETA, etc.).
+              Subí una lista de precios en PDF: detectamos código, descripción y precio,
+              y creamos la categoría <strong>Alimento balanceado</strong> con subcategorías (ESTAMPA, VAGONETA, etc.).
             </p>
             <form onSubmit={analyzeImportPdf} className="admin-form">
               <label>
@@ -336,11 +336,6 @@ export default function AdminPanel() {
             {importPreview && (
               <div className="admin-preview">
                 <h3>Vista previa</h3>
-                {importPreview.brand && (
-                  <p>
-                    <strong>Marca:</strong> {importPreview.brand}
-                  </p>
-                )}
                 <ul className="admin-preview-list">
                   {importPreview.categories?.map((cat) => (
                     <li key={cat.id}>
@@ -428,6 +423,7 @@ export default function AdminPanel() {
             onChange={setEditorState}
             onSave={saveCatalog}
             loading={loading}
+            adminToken={token}
           />
         )}
       </div>

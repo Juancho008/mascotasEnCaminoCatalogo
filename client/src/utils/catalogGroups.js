@@ -9,12 +9,24 @@ export function slugify(text) {
   );
 }
 
+function cleanLegacyText(text) {
+  return String(text || "")
+    .replace(/\s*·\s*MOLINO SEDA\s*/gi, "")
+    .replace(/^MOLINO SEDA\s*$/i, "")
+    .trim();
+}
+
 /** Catálogo plano (KV) → grupos con subcategorías para el editor. */
 export function catalogToGroups(catalog) {
   const groupsMap = new Map();
 
   for (const cat of catalog?.categories || []) {
     const clone = structuredClone(cat);
+    clone.description = cleanLegacyText(clone.description);
+    clone.products = (clone.products || []).map((p) => ({
+      ...p,
+      description: cleanLegacyText(p.description),
+    }));
 
     if (cat.group) {
       const parentId = cat.groupId || slugify(cat.group);
@@ -57,6 +69,7 @@ export function groupsToCatalog(editorState) {
         ...sub,
         id: subId,
         label: sub.label || "Sin nombre",
+        description: cleanLegacyText(sub.description),
         group: multiSub ? group.label : undefined,
         groupId: multiSub ? group.id : undefined,
         order: order++,
@@ -64,6 +77,7 @@ export function groupsToCatalog(editorState) {
           ...p,
           id: p.id || `${subId}/${p.code || slugify(p.name)}`,
           category: subId,
+          description: cleanLegacyText(p.description),
         })),
       });
     }

@@ -1,11 +1,22 @@
+import { useState } from "react";
 import {
   emptyGroup,
   emptyProduct,
   emptySubcategory,
   slugify,
 } from "../utils/catalogGroups.js";
+import { uploadProductImage } from "../utils/uploadProductImage.js";
 
-export default function CatalogEditor({ editorState, onChange, onSave, loading }) {
+export default function CatalogEditor({
+  editorState,
+  onChange,
+  onSave,
+  loading,
+  adminToken,
+}) {
+  const [uploadingKey, setUploadingKey] = useState(null);
+  const [uploadError, setUploadError] = useState("");
+
   if (!editorState) return null;
 
   const { site, groups } = editorState;
@@ -105,6 +116,21 @@ export default function CatalogEditor({ editorState, onChange, onSave, loading }
     updateGroups(groups.filter((_, i) => i !== gi));
   }
 
+  async function handleImageUpload(gi, si, pi, file) {
+    if (!file) return;
+    const key = `${gi}-${si}-${pi}`;
+    setUploadError("");
+    setUploadingKey(key);
+    try {
+      const url = await uploadProductImage(file, adminToken);
+      updateProduct(gi, si, pi, { image: url });
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploadingKey(null);
+    }
+  }
+
   return (
     <div className="catalog-editor">
       <section className="admin-card admin-site-card">
@@ -193,8 +219,30 @@ export default function CatalogEditor({ editorState, onChange, onSave, loading }
                   <p className="admin-hint">Sin productos en esta subcategoría.</p>
                 ) : (
                   <div className="admin-product-list">
-                    {sub.products.map((product, pi) => (
+                    {sub.products.map((product, pi) => {
+                      const rowKey = `${gi}-${si}-${pi}`;
+                      const isUploading = uploadingKey === rowKey;
+                      return (
                       <div key={product.id || pi} className="admin-product-row">
+                        <div className="admin-product-image">
+                          <img
+                            src={product.image || "/images/Logo/LogoMascotaEnCamino.png"}
+                            alt=""
+                          />
+                          <label className="admin-image-upload">
+                            {isUploading ? "Subiendo…" : "📷 Foto"}
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              disabled={isUploading || loading}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleImageUpload(gi, si, pi, file);
+                                e.target.value = "";
+                              }}
+                            />
+                          </label>
+                        </div>
                         <label>
                           Código
                           <input
@@ -249,7 +297,8 @@ export default function CatalogEditor({ editorState, onChange, onSave, loading }
                           ✕
                         </button>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 )}
               </div>
@@ -267,6 +316,7 @@ export default function CatalogEditor({ editorState, onChange, onSave, loading }
       ))}
 
       <div className="admin-editor-actions">
+        {uploadError && <p className="admin-error">{uploadError}</p>}
         <button type="button" className="admin-btn-secondary" onClick={addGroup}>
           + Agregar categoría principal
         </button>

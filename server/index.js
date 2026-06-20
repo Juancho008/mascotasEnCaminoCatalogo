@@ -154,6 +154,41 @@ app.delete("/api/admin/upload-pdf", async (req, res) => {
   res.status(response.status).type("json").send(body);
 });
 
+app.get("/api/product-image", async (req, res) => {
+  const base = workerBaseUrl();
+  const id = req.query.id;
+  if (!id) return res.status(400).json({ error: "Falta id" });
+  if (!base) return res.status(404).json({ error: "Imagen no encontrada" });
+  try {
+    const response = await fetch(`${base}/api/product-image?id=${encodeURIComponent(id)}`);
+    const type = response.headers.get("content-type") || "application/octet-stream";
+    const body = Buffer.from(await response.arrayBuffer());
+    res.status(response.status).type(type).send(body);
+  } catch (err) {
+    console.error("[api/product-image]", err);
+    res.status(502).json({ error: "No se pudo cargar la imagen" });
+  }
+});
+
+app.post("/api/admin/upload-image", express.json({ limit: "4mb" }), async (req, res) => {
+  if (!checkAdmin(req, res)) return;
+  const base = workerBaseUrl();
+  const adminToken = process.env.ADMIN_TOKEN?.trim();
+  if (!base || !adminToken) {
+    return res.status(500).json({ error: "Faltan CATALOG_WORKER_URL o ADMIN_TOKEN" });
+  }
+  const response = await fetch(`${base}/api/admin/images`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(req.body),
+  });
+  const body = await response.text();
+  res.status(response.status).type("json").send(body);
+});
+
 app.post("/api/admin/import-pdf", express.json({ limit: "15mb" }), async (req, res) => {
   if (!checkAdmin(req, res)) return;
   try {
@@ -182,7 +217,6 @@ app.post("/api/admin/import-pdf", express.json({ limit: "15mb" }), async (req, r
       return res.json({
         ok: true,
         preview: true,
-        brand: parsed.brand,
         totalProducts: parsed.totalProducts,
         categories: parsed.categories.map((c) => ({
           id: c.id,

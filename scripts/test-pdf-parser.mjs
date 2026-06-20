@@ -12,8 +12,9 @@ LINEA DR PERROT / VALIANT
 414 DR. PERROT X 1,5KG 2800.000`;
 
 const r = parsePriceListText(sample);
-console.log("brand:", r.brand);
+console.log("grupo:", r.parentGroup);
 console.log("total:", r.totalProducts);
 for (const c of r.categories) {
-  console.log(`- ${c.label}: ${c.products.length} productos`);
+  console.log(`- ${c.label}: ${c.products.length} productos, desc cat: "${c.description}"`);
+  if (c.products[0]) console.log(`  ej prod desc: "${c.products[0].description}"`);
 }

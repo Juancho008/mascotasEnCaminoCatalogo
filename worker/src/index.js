@@ -9,6 +9,10 @@ import {
   handleDocumentUpload,
   handleDocumentsList,
 } from "./documents.js";
+import {
+  handleProductImageDownload,
+  handleProductImageUpload,
+} from "./images.js";
 
 const CATALOG_KEY = "catalog";
 
@@ -64,6 +68,16 @@ export default {
     const adminDocMatch = url.pathname.match(/^\/api\/admin\/documents\/([^/]+)$/);
     if (request.method === "DELETE" && adminDocMatch) {
       return handleDocumentDelete(request, env, adminDocMatch[1], json);
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/product-image") {
+      const id = url.searchParams.get("id");
+      if (!id) return json({ error: "Falta id" }, 400);
+      return handleProductImageDownload(env, id, corsHeaders);
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/admin/images") {
+      return handleProductImageUpload(request, env, json);
     }
 
     if (!isCatalogPath(url.pathname)) {

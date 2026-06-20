@@ -64,7 +64,6 @@ module.exports = async (req, res) => {
       return res.status(200).json({
         ok: true,
         preview: true,
-        brand: parsed.brand,
         totalProducts: parsed.totalProducts,
         categories: parsed.categories.map((c) => ({
           id: c.id,
@@ -106,7 +105,6 @@ module.exports = async (req, res) => {
         payload.imported = {
           totalProducts: parsed.totalProducts,
           categories: parsed.categories.length,
-          brand: parsed.brand,
         };
       }
       res.setHeader("Content-Type", "application/json; charset=utf-8");

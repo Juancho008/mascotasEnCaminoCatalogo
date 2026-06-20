@@ -14,8 +14,10 @@ const pdf = await pdfParse(buf);
 const parsed = parsePriceListText(pdf.text);
 
 console.log("[test-pdf] Texto extraído:", pdf.text.length, "caracteres");
-console.log("[test-pdf] Marca:", parsed.brand || "(sin detectar)");
+console.log("[test-pdf] Grupo:", parsed.parentGroup || "(sin grupo)");
 console.log("[test-pdf] Productos:", parsed.totalProducts);
 for (const c of parsed.categories) {
   console.log(`  - ${c.label}: ${c.products.length}`);
+  const p0 = c.products[0];
+  if (p0) console.log(`    ej descripción: "${p0.description}"`);
 }

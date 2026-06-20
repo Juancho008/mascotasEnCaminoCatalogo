@@ -7,6 +7,8 @@
     { "src": "api/admin-catalog.cjs", "use": "@vercel/node" },
     { "src": "api/admin-upload.cjs", "use": "@vercel/node" },
     { "src": "api/admin-import-pdf.cjs", "use": "@vercel/node" },
+    { "src": "api/admin-upload-image.cjs", "use": "@vercel/node" },
+    { "src": "api/product-image.cjs", "use": "@vercel/node" },
     {
       "src": "package.json",
       "use": "@vercel/static-build",
@@ -15,6 +17,8 @@
   ],
   "routes": [
     { "src": "/api/admin/import-pdf", "dest": "/api/admin-import-pdf.cjs" },
+    { "src": "/api/admin/upload-image", "dest": "/api/admin-upload-image.cjs" },
+    { "src": "/api/product-image", "dest": "/api/product-image.cjs" },
     { "src": "/api/admin/upload-pdf", "dest": "/api/admin-upload.cjs" },
     { "src": "/api/admin/catalog", "dest": "/api/admin-catalog.cjs" },
     { "src": "/api/catalog", "dest": "/api/catalog.cjs" },
