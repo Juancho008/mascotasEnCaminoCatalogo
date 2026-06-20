@@ -9,6 +9,7 @@ import Footer from "./components/Footer.jsx";
 import Loader from "./components/Loader.jsx";
 import AdminPanel from "./AdminPanel.jsx";
 import DocumentsSection from "./components/DocumentsSection.jsx";
+import WeekendDeliveryBanner from "./components/WeekendDeliveryBanner.jsx";
 import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
 import { isCategoryEnabled, getCatalogNavGroups } from "./utils/catalogGroups.js";
 
@@ -236,6 +237,8 @@ export default function App() {
           onSelectSub={handleSelectSub}
           searchActive={searchActive}
         />
+
+        <WeekendDeliveryBanner />
 
         <div className="catalog-container">
           <AnimatePresence mode="wait">
