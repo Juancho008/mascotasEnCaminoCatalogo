@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import CatalogEditor from "./components/CatalogEditor.jsx";
 import { catalogToGroups, groupsToCatalog } from "./utils/catalogGroups.js";
+import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
 
 const STORAGE_KEY = "mec_admin_token";
 

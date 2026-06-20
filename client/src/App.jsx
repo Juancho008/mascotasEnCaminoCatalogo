@@ -9,7 +9,7 @@ import Footer from "./components/Footer.jsx";
 import Loader from "./components/Loader.jsx";
 import AdminPanel from "./AdminPanel.jsx";
 import DocumentsSection from "./components/DocumentsSection.jsx";
-import { sanitizeCatalog } from "../../lib/sanitize-catalog.mjs";
+import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
 
 const isAdminRoute =
   typeof window !== "undefined" &&

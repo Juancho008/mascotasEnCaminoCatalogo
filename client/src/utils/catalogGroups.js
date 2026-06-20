@@ -1,7 +1,7 @@
 import {
   cleanLegacyBrandText,
   slugifyCatalog,
-} from "../../../lib/sanitize-catalog.mjs";
+} from "./sanitizeCatalog.js";
 
 export function slugify(text) {
   return slugifyCatalog(text);
