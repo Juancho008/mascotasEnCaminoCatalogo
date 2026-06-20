@@ -46,6 +46,12 @@ module.exports = async (req, res) => {
     });
     const body = await response.text();
     res.setHeader("Content-Type", "application/json; charset=utf-8");
+    if (response.status === 404) {
+      return res.status(502).json({
+        error:
+          "El Worker de Cloudflare no tiene la ruta de imágenes. Ejecutá: npm run worker:deploy",
+      });
+    }
     return res.status(response.status).send(body);
   } catch (err) {
     console.error("[admin/upload-image]", err);
