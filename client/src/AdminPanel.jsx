@@ -269,7 +269,7 @@ export default function AdminPanel() {
 
   return (
     <div className="admin-screen">
-      <div className="admin-layout">
+      <div className={`admin-layout${tab === "catalog" ? " admin-layout-wide" : ""}`}>
         <header className="admin-header">
           <div>
             <h1>Panel de administración</h1>
