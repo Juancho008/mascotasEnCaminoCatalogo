@@ -1,19 +1,14 @@
+import {
+  cleanLegacyBrandText,
+  slugifyCatalog,
+} from "../../../lib/sanitize-catalog.mjs";
+
 export function slugify(text) {
-  return (
-    String(text || "")
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .replace(/[^a-zA-Z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 72) || "item"
-  );
+  return slugifyCatalog(text);
 }
 
 function cleanLegacyText(text) {
-  return String(text || "")
-    .replace(/\s*·\s*MOLINO SEDA\s*/gi, "")
-    .replace(/^MOLINO SEDA\s*$/i, "")
-    .trim();
+  return cleanLegacyBrandText(text);
 }
 
 /** Catálogo plano (KV) → grupos con subcategorías para el editor. */

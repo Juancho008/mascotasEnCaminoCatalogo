@@ -65,7 +65,7 @@ export default function AdminPanel() {
     const text = await r.text();
     if (!r.ok) throw new Error("No se pudo cargar el catálogo");
     const data = JSON.parse(text);
-    setEditorState(catalogToGroups(data));
+    setEditorState(catalogToGroups(sanitizeCatalog(data)));
     setDocuments(data.documents || []);
   }
 

@@ -9,6 +9,7 @@ import Footer from "./components/Footer.jsx";
 import Loader from "./components/Loader.jsx";
 import AdminPanel from "./AdminPanel.jsx";
 import DocumentsSection from "./components/DocumentsSection.jsx";
+import { sanitizeCatalog } from "../../lib/sanitize-catalog.mjs";
 
 const isAdminRoute =
   typeof window !== "undefined" &&
@@ -93,10 +94,11 @@ export default function App() {
       })
       .then((data) => {
         if (cancelled) return;
-        setCatalog(data);
-        applyTheme(data.site?.theme);
-        if (data.site?.storeName) document.title = data.site.storeName;
-        if (data.categories?.length) setActiveCategory(data.categories[0].id);
+        const catalogData = sanitizeCatalog(data);
+        setCatalog(catalogData);
+        applyTheme(catalogData.site?.theme);
+        if (catalogData.site?.storeName) document.title = catalogData.site.storeName;
+        if (catalogData.categories?.length) setActiveCategory(catalogData.categories[0].id);
       })
       .catch((err) => !cancelled && setError(err.message));
     return () => {
