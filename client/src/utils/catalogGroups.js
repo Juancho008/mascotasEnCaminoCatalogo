@@ -143,3 +143,18 @@ export function groupCategoriesForDisplay(categories) {
 
   return [...map.values()];
 }
+
+/** Grupos para la navegación de la tienda (Collares, Alimento balanceado, etc.). */
+export function getCatalogNavGroups(categories) {
+  return groupCategoriesForDisplay(categories).map((g) => {
+    const first = g.categories[0];
+    return {
+      key: g.key,
+      title: g.title,
+      label: g.title || first?.label || "Catálogo",
+      emoji: first?.emoji || "🐾",
+      categories: g.categories,
+      hasMultiple: g.categories.length > 1,
+    };
+  });
+}

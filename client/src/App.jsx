@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Header from "./components/Header.jsx";
 import Hero from "./components/Hero.jsx";
-import CategoryNav from "./components/CategoryNav.jsx";
+import CatalogNav from "./components/CatalogNav.jsx";
 import CatalogGroupedView from "./components/CatalogGroupedView.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
 import Footer from "./components/Footer.jsx";
@@ -10,7 +10,7 @@ import Loader from "./components/Loader.jsx";
 import AdminPanel from "./AdminPanel.jsx";
 import DocumentsSection from "./components/DocumentsSection.jsx";
 import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
-import { isCategoryEnabled } from "./utils/catalogGroups.js";
+import { isCategoryEnabled, getCatalogNavGroups } from "./utils/catalogGroups.js";
 
 const isAdminRoute =
   typeof window !== "undefined" &&
@@ -77,7 +77,8 @@ export default function App() {
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState(null);
+  const [activeGroupKey, setActiveGroupKey] = useState(null);
+  const [activeSubId, setActiveSubId] = useState(null);
   const [query, setQuery] = useState("");
 
   const catalogUrl = import.meta.env.VITE_CATALOG_API || "/api/catalog";
@@ -99,9 +100,13 @@ export default function App() {
         setCatalog(catalogData);
         applyTheme(catalogData.site?.theme);
         if (catalogData.site?.storeName) document.title = catalogData.site.storeName;
-        if (catalogData.categories?.length) {
-          const firstVisible = catalogData.categories.find(isCategoryEnabled);
-          setActiveCategory(firstVisible?.id ?? catalogData.categories[0].id);
+        const groups = getCatalogNavGroups(
+          catalogData.categories.filter(isCategoryEnabled)
+        );
+        if (groups.length) {
+          const first = groups[0];
+          setActiveGroupKey(first.key);
+          setActiveSubId(first.hasMultiple ? first.categories[0]?.id : null);
         }
       })
       .catch((err) => !cancelled && setError(err.message));
@@ -115,12 +120,18 @@ export default function App() {
     return catalog.categories.filter(isCategoryEnabled);
   }, [catalog]);
 
+  const navGroups = useMemo(
+    () => getCatalogNavGroups(visibleCategories),
+    [visibleCategories]
+  );
+
+  const searchActive = Boolean(query.trim());
+
   const filteredCategories = useMemo(() => {
     if (!catalog) return [];
     const q = query.trim().toLowerCase();
-    const base = visibleCategories;
-    if (!q) return base;
-    return base
+    if (!q) return visibleCategories;
+    return visibleCategories
       .map((cat) => ({
         ...cat,
         products: cat.products.filter(
@@ -131,6 +142,43 @@ export default function App() {
       }))
       .filter((cat) => cat.products.length > 0);
   }, [catalog, query, visibleCategories]);
+
+  const displayCategories = useMemo(() => {
+    if (searchActive) return filteredCategories;
+
+    const group =
+      navGroups.find((g) => g.key === activeGroupKey) || navGroups[0];
+    if (!group) return [];
+
+    if (!group.hasMultiple) return group.categories;
+
+    if (activeSubId) {
+      return group.categories.filter((c) => c.id === activeSubId);
+    }
+    return [group.categories[0]].filter(Boolean);
+  }, [searchActive, filteredCategories, navGroups, activeGroupKey, activeSubId]);
+
+  function handleSelectGroup(key) {
+    const group = navGroups.find((g) => g.key === key);
+    if (!group) return;
+    setActiveGroupKey(key);
+    setActiveSubId(group.hasMultiple ? group.categories[0]?.id : null);
+    scrollToCatalog();
+  }
+
+  function handleSelectSub(id) {
+    setActiveSubId(id);
+    scrollToCatalog();
+  }
+
+  function scrollToCatalog() {
+    requestAnimationFrame(() => {
+      document.querySelector(".catalog-container")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
 
   if (error) {
     return (
@@ -160,15 +208,18 @@ export default function App() {
 
         <DocumentsSection documents={catalog.documents} />
 
-        <CategoryNav
-          categories={visibleCategories}
-          active={activeCategory}
-          onSelect={setActiveCategory}
+        <CatalogNav
+          groups={navGroups}
+          activeGroupKey={activeGroupKey}
+          activeSubId={activeSubId}
+          onSelectGroup={handleSelectGroup}
+          onSelectSub={handleSelectSub}
+          searchActive={searchActive}
         />
 
         <div className="catalog-container">
           <AnimatePresence mode="wait">
-            {filteredCategories.length === 0 ? (
+            {displayCategories.length === 0 ? (
               <motion.div
                 key="empty"
                 className="state-screen state-inline"
@@ -176,15 +227,28 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <p className="state-emoji">🔍</p>
-                <h2>Sin resultados</h2>
-                <p>No encontramos productos para “{query}”.</p>
+                <p className="state-emoji">{searchActive ? "🔍" : "📦"}</p>
+                <h2>{searchActive ? "Sin resultados" : "Sin productos"}</h2>
+                <p>
+                  {searchActive
+                    ? `No encontramos productos para “${query}”.`
+                    : "No hay productos en esta categoría por ahora."}
+                </p>
               </motion.div>
             ) : (
-              <CatalogGroupedView
-                categories={filteredCategories}
-                site={site}
-              />
+              <motion.div
+                key={`${activeGroupKey}-${activeSubId}-${searchActive ? query : ""}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+              >
+                <CatalogGroupedView
+                  categories={displayCategories}
+                  site={site}
+                  showGroupTitles={searchActive}
+                />
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

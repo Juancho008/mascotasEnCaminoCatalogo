@@ -2,14 +2,18 @@ import { AnimatePresence, motion } from "framer-motion";
 import { groupCategoriesForDisplay } from "../utils/catalogGroups.js";
 import CategorySection from "./CategorySection.jsx";
 
-export default function CatalogGroupedView({ categories, site }) {
+export default function CatalogGroupedView({
+  categories,
+  site,
+  showGroupTitles = false,
+}) {
   const groups = groupCategoriesForDisplay(categories);
 
   return (
     <>
       {groups.map((group) => {
         const showParentTitle =
-          group.title && group.categories.some((c) => c.group);
+          showGroupTitles && group.title && group.categories.some((c) => c.group);
 
         return (
           <div key={group.key} className="category-group">

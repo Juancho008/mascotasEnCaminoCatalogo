@@ -17,8 +17,6 @@ export default function AdminPanel() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [pdfTitle, setPdfTitle] = useState("");
-  const [pdfFile, setPdfFile] = useState(null);
   const [documents, setDocuments] = useState([]);
 
   const [editorState, setEditorState] = useState(null);
@@ -28,7 +26,6 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (!token) return;
-    loadDocuments();
     loadCatalog();
   }, [token]);
 
@@ -68,15 +65,6 @@ export default function AdminPanel() {
     const data = JSON.parse(text);
     setEditorState(catalogToGroups(sanitizeCatalog(data)));
     setDocuments(data.documents || []);
-  }
-
-  async function loadDocuments() {
-    try {
-      const r = await fetch("/api/pdfs");
-      if (r.ok) setDocuments(await r.json());
-    } catch {
-      /* ignorar */
-    }
   }
 
   function fileToBase64(file) {
@@ -157,65 +145,6 @@ export default function AdminPanel() {
     }
   }
 
-  async function uploadPdf(e) {
-    e.preventDefault();
-    if (!pdfFile) {
-      setError("Seleccioná un PDF");
-      return;
-    }
-    setError("");
-    setMessage("");
-    setLoading(true);
-    try {
-      const data = await fileToBase64(pdfFile);
-      const r = await fetch("/api/admin/upload-pdf", {
-        method: "POST",
-        headers: {
-          ...authHeaders(token),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: pdfTitle || pdfFile.name.replace(/\.pdf$/i, ""),
-          filename: pdfFile.name,
-          data,
-        }),
-      });
-      const resData = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(resData.error || "Error al subir");
-      setMessage("PDF subido correctamente");
-      setPdfFile(null);
-      setPdfTitle("");
-      e.target.reset();
-      await loadDocuments();
-      await loadCatalog();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function deletePdf(id) {
-    if (!confirm("¿Eliminar este PDF?")) return;
-    setLoading(true);
-    setError("");
-    try {
-      const r = await fetch(`/api/admin/upload-pdf?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers: authHeaders(token),
-      });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || "No se pudo eliminar");
-      setMessage("PDF eliminado");
-      await loadDocuments();
-      await loadCatalog();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function saveCatalog() {
     setError("");
     setMessage("");
@@ -246,7 +175,7 @@ export default function AdminPanel() {
       <div className="admin-screen">
         <form className="admin-card" onSubmit={login}>
           <h1>🐾 Panel de administración</h1>
-          <p>Subí PDFs y editá el catálogo en Cloudflare.</p>
+          <p>Importá listas de precios y editá el catálogo en Cloudflare.</p>
           <label>
             Contraseña
             <input
@@ -273,7 +202,7 @@ export default function AdminPanel() {
         <header className="admin-header">
           <div>
             <h1>Panel de administración</h1>
-            <p>Gestioná catálogos PDF y datos en Cloudflare KV</p>
+            <p>Importá productos desde PDF y editá el catálogo</p>
           </div>
           <div className="admin-header-actions">
             <a href="/">Ver tienda</a>
@@ -290,13 +219,6 @@ export default function AdminPanel() {
             onClick={() => setTab("import")}
           >
             📥 Importar lista PDF
-          </button>
-          <button
-            type="button"
-            className={tab === "pdf" ? "active" : ""}
-            onClick={() => setTab("pdf")}
-          >
-            📄 Publicar PDF
           </button>
           <button
             type="button"
@@ -359,61 +281,6 @@ export default function AdminPanel() {
                   {loading ? "Importando…" : "Importar al catálogo en Cloudflare"}
                 </button>
               </div>
-            )}
-          </section>
-        )}
-
-        {tab === "pdf" && (
-          <section className="admin-card">
-            <h2>Publicar PDF para descarga</h2>
-            <p className="admin-hint">
-              Solo guarda el PDF para que tus clientes lo descarguen. Para cargar productos al sitio, usá <strong>Importar lista PDF</strong>.
-            </p>
-            <form onSubmit={uploadPdf} className="admin-form">
-              <label>
-                Título visible
-                <input
-                  type="text"
-                  value={pdfTitle}
-                  onChange={(e) => setPdfTitle(e.target.value)}
-                  placeholder="Ej: Catálogo otoño 2026"
-                />
-              </label>
-              <label>
-                Archivo PDF (máx. 10 MB)
-                <input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-                />
-              </label>
-              <button type="submit" disabled={loading}>
-                {loading ? "Subiendo…" : "Subir PDF"}
-              </button>
-            </form>
-
-            <h3>PDFs publicados</h3>
-            {documents.length === 0 ? (
-              <p className="admin-hint">Todavía no hay PDFs.</p>
-            ) : (
-              <ul className="admin-doc-list">
-                {documents.map((doc) => (
-                  <li key={doc.id}>
-                    <div>
-                      <strong>{doc.title}</strong>
-                      <span>{doc.filename}</span>
-                    </div>
-                    <div className="admin-doc-actions">
-                      <a href={`/api/pdfs?id=${doc.id}`} target="_blank" rel="noreferrer">
-                        Ver
-                      </a>
-                      <button type="button" onClick={() => deletePdf(doc.id)}>
-                        Eliminar
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
             )}
           </section>
         )}
