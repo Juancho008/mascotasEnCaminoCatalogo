@@ -10,6 +10,7 @@ import Loader from "./components/Loader.jsx";
 import AdminPanel from "./AdminPanel.jsx";
 import DocumentsSection from "./components/DocumentsSection.jsx";
 import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
+import { isCategoryEnabled } from "./utils/catalogGroups.js";
 
 const isAdminRoute =
   typeof window !== "undefined" &&
@@ -98,7 +99,10 @@ export default function App() {
         setCatalog(catalogData);
         applyTheme(catalogData.site?.theme);
         if (catalogData.site?.storeName) document.title = catalogData.site.storeName;
-        if (catalogData.categories?.length) setActiveCategory(catalogData.categories[0].id);
+        if (catalogData.categories?.length) {
+          const firstVisible = catalogData.categories.find(isCategoryEnabled);
+          setActiveCategory(firstVisible?.id ?? catalogData.categories[0].id);
+        }
       })
       .catch((err) => !cancelled && setError(err.message));
     return () => {
@@ -106,11 +110,17 @@ export default function App() {
     };
   }, [catalogUrl]);
 
+  const visibleCategories = useMemo(() => {
+    if (!catalog) return [];
+    return catalog.categories.filter(isCategoryEnabled);
+  }, [catalog]);
+
   const filteredCategories = useMemo(() => {
     if (!catalog) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return catalog.categories;
-    return catalog.categories
+    const base = visibleCategories;
+    if (!q) return base;
+    return base
       .map((cat) => ({
         ...cat,
         products: cat.products.filter(
@@ -120,7 +130,7 @@ export default function App() {
         ),
       }))
       .filter((cat) => cat.products.length > 0);
-  }, [catalog, query]);
+  }, [catalog, query, visibleCategories]);
 
   if (error) {
     return (
@@ -151,7 +161,7 @@ export default function App() {
         <DocumentsSection documents={catalog.documents} />
 
         <CategoryNav
-          categories={catalog.categories}
+          categories={visibleCategories}
           active={activeCategory}
           onSelect={setActiveCategory}
         />

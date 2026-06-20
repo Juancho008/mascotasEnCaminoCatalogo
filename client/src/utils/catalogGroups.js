@@ -67,6 +67,7 @@ export function groupsToCatalog(editorState) {
         description: cleanLegacyText(sub.description),
         group: multiSub ? group.label : undefined,
         groupId: multiSub ? group.id : undefined,
+        enabled: sub.enabled !== false,
         order: order++,
         products: (sub.products || []).map((p) => ({
           ...p,
@@ -108,8 +109,13 @@ export function emptySubcategory(groupId) {
     label: "Nueva subcategoría",
     emoji: "🐾",
     description: "",
+    enabled: true,
     products: [],
   };
+}
+
+export function isCategoryEnabled(category) {
+  return category?.enabled !== false;
 }
 
 export function emptyGroup() {

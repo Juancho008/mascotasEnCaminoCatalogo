@@ -131,6 +131,22 @@ export default function CatalogEditor({
     }
   }
 
+  function toggleSubcategoryEnabled(gi, si) {
+    const sub = groups[gi].subcategories[si];
+    updateSubcategory(gi, si, { enabled: sub.enabled === false });
+  }
+
+  function toggleGroupEnabled(gi) {
+    const g = groups[gi];
+    const allEnabled = g.subcategories.every((s) => s.enabled !== false);
+    updateGroup(gi, {
+      subcategories: g.subcategories.map((s) => ({
+        ...s,
+        enabled: !allEnabled,
+      })),
+    });
+  }
+
   return (
     <div className="catalog-editor">
       <section className="admin-card admin-site-card">
@@ -153,8 +169,13 @@ export default function CatalogEditor({
         </div>
       </section>
 
-      {groups.map((group, gi) => (
-        <section key={group.id} className="admin-card admin-group-card">
+      {groups.map((group, gi) => {
+        const groupVisible = group.subcategories.some((s) => s.enabled !== false);
+        return (
+        <section
+          key={group.id}
+          className={`admin-card admin-group-card${groupVisible ? "" : " admin-group-card-off"}`}
+        >
           <div className="admin-group-head">
             <label className="admin-group-label">
               Categoría principal
@@ -166,6 +187,13 @@ export default function CatalogEditor({
             </label>
             <button
               type="button"
+              className={`admin-btn-toggle${groupVisible ? "" : " admin-btn-toggle-off"}`}
+              onClick={() => toggleGroupEnabled(gi)}
+            >
+              {groupVisible ? "👁 Visible en tienda" : "🚫 Oculta en tienda"}
+            </button>
+            <button
+              type="button"
               className="admin-btn-danger"
               onClick={() => removeGroup(gi)}
             >
@@ -173,8 +201,13 @@ export default function CatalogEditor({
             </button>
           </div>
 
-          {group.subcategories.map((sub, si) => (
-            <div key={sub.id} className="admin-subcategory">
+          {group.subcategories.map((sub, si) => {
+            const subVisible = sub.enabled !== false;
+            return (
+            <div
+              key={sub.id}
+              className={`admin-subcategory${subVisible ? "" : " admin-subcategory-off"}`}
+            >
               <div className="admin-subcategory-head">
                 <label>
                   Subcategoría
@@ -196,6 +229,13 @@ export default function CatalogEditor({
                     maxLength={4}
                   />
                 </label>
+                <button
+                  type="button"
+                  className={`admin-btn-toggle admin-btn-toggle-sm${subVisible ? "" : " admin-btn-toggle-off"}`}
+                  onClick={() => toggleSubcategoryEnabled(gi, si)}
+                >
+                  {subVisible ? "👁 Visible" : "🚫 Oculta"}
+                </button>
                 {group.subcategories.length > 1 && (
                   <button
                     type="button"
@@ -303,7 +343,8 @@ export default function CatalogEditor({
                 )}
               </div>
             </div>
-          ))}
+          );
+          })}
 
           <button
             type="button"
@@ -313,7 +354,8 @@ export default function CatalogEditor({
             + Agregar subcategoría
           </button>
         </section>
-      ))}
+      );
+      })}
 
       <div className="admin-editor-actions">
         {uploadError && <p className="admin-error">{uploadError}</p>}
