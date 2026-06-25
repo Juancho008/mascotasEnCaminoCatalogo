@@ -3,7 +3,6 @@ import {
   emptyGroup,
   emptyProduct,
   emptySubcategory,
-  slugify,
 } from "../utils/catalogGroups.js";
 import { uploadProductImage } from "../utils/uploadProductImage.js";
 
@@ -25,9 +24,7 @@ export default function CatalogEditor({
   const [activeNav, setActiveNav] = useState("site");
   const [expanded, setExpanded] = useState(() => new Set(["site"]));
 
-  if (!editorState) return null;
-
-  const { site, groups } = editorState;
+  const { site, groups } = editorState || { site: {}, groups: [] };
 
   const navItems = useMemo(() => {
     const items = [{ id: "site", label: "Datos de tienda", emoji: "🏪", depth: 0 }];
@@ -75,21 +72,15 @@ export default function CatalogEditor({
 
   function updateGroup(gi, patch) {
     const next = groups.map((g, i) => (i === gi ? { ...g, ...patch } : g));
-    if (patch.label) {
-      next[gi].id = slugify(patch.label) || next[gi].id;
-    }
     updateGroups(next);
   }
 
   function updateSubcategory(gi, si, patch) {
     const next = groups.map((g, i) => {
       if (i !== gi) return g;
-      const subs = g.subcategories.map((s, j) => {
-        if (j !== si) return s;
-        const updated = { ...s, ...patch };
-        if (patch.label) updated.id = slugify(patch.label) || s.id;
-        return updated;
-      });
+      const subs = g.subcategories.map((s, j) =>
+        j === si ? { ...s, ...patch } : s
+      );
       return { ...g, subcategories: subs };
     });
     updateGroups(next);
@@ -237,6 +228,8 @@ export default function CatalogEditor({
     setExpanded(new Set(["site"]));
   }
 
+  if (!editorState) return null;
+
   const saveButton = (
     <button
       type="button"
@@ -342,7 +335,7 @@ export default function CatalogEditor({
 
             return (
               <section
-                key={group.id}
+                key={groupId}
                 id={`editor-${groupId}`}
                 className={`admin-card admin-group-card catalog-editor-section${
                   groupVisible ? "" : " admin-group-card-off"
@@ -397,7 +390,7 @@ export default function CatalogEditor({
 
                       return (
                         <div
-                          key={sub.id}
+                          key={subId}
                           id={`editor-${subId}`}
                           className={`admin-subcategory catalog-editor-sub${
                             subVisible ? "" : " admin-subcategory-off"
@@ -481,7 +474,7 @@ export default function CatalogEditor({
                                       const isUploading = uploadingKey === rowKey;
                                       return (
                                         <div
-                                          key={product.id || pi}
+                                          key={rowKey}
                                           className="admin-product-row"
                                         >
                                           <div className="admin-product-image">

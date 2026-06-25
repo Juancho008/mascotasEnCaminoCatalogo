@@ -57,16 +57,17 @@ export function groupsToCatalog(editorState) {
 
   for (const group of editorState.groups || []) {
     const multiSub = group.subcategories.length > 1;
+    const groupId = slugify(group.label) || group.id;
 
     for (const sub of group.subcategories || []) {
-      const subId = sub.id || slugify(sub.label);
+      const subId = slugify(sub.label) || sub.id;
       categories.push({
         ...sub,
         id: subId,
         label: sub.label || "Sin nombre",
         description: cleanLegacyText(sub.description),
         group: multiSub ? group.label : undefined,
-        groupId: multiSub ? group.id : undefined,
+        groupId: multiSub ? groupId : undefined,
         enabled: sub.enabled !== false,
         order: order++,
         products: (sub.products || []).map((p) => ({
