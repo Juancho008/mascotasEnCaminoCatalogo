@@ -25,6 +25,39 @@ async function getParser() {
   return parseModule;
 }
 
+function buildPreviewResponse(parsed) {
+  return {
+    ok: true,
+    preview: true,
+    totalProducts: parsed.totalProducts,
+    categories: parsed.categories.map((c) => ({
+      id: c.id,
+      label: c.label,
+      productCount: c.products.length,
+      products: c.products.slice(0, 5),
+    })),
+  };
+}
+
+function parseSaveResponse(saveBody, saveRes, parsed) {
+  let payload;
+  try {
+    payload = JSON.parse(saveBody);
+  } catch {
+    payload = { ok: saveRes.ok };
+  }
+
+  if (!saveRes.ok) return payload;
+
+  return {
+    ...payload,
+    imported: {
+      totalProducts: parsed.totalProducts,
+      categories: parsed.categories.length,
+    },
+  };
+}
+
 module.exports = async (req, res) => {
   if (req.method === "OPTIONS") return sendOptions(res);
 
@@ -61,57 +94,37 @@ module.exports = async (req, res) => {
     }
 
     if (action === "preview") {
-      return res.status(200).json({
-        ok: true,
-        preview: true,
-        totalProducts: parsed.totalProducts,
-        categories: parsed.categories.map((c) => ({
-          id: c.id,
-          label: c.label,
-          productCount: c.products.length,
-          products: c.products.slice(0, 5),
-        })),
+      return res.status(200).json(buildPreviewResponse(parsed));
+    }
+
+    if (action !== "import") {
+      return res.status(400).json({ error: "action debe ser preview o import" });
+    }
+
+    const catalogRes = await workerFetch("/catalog.json", {
+      method: "GET",
+      useHmac: true,
+    });
+    const catalogText = await catalogRes.text();
+    if (!catalogRes.ok) {
+      return res.status(catalogRes.status).json({
+        error: "No se pudo leer el catálogo actual",
       });
     }
 
-    if (action === "import") {
-      const catalogRes = await workerFetch("/catalog.json", {
-        method: "GET",
-        useHmac: true,
-      });
-      const catalogText = await catalogRes.text();
-      if (!catalogRes.ok) {
-        return res.status(catalogRes.status).json({
-          error: "No se pudo leer el catálogo actual",
-        });
-      }
+    const existing = JSON.parse(catalogText);
+    const merged = mergeImportedCatalog(existing, parsed, { replace });
 
-      const existing = JSON.parse(catalogText);
-      const merged = mergeImportedCatalog(existing, parsed, { replace });
+    const saveRes = await workerFetch("/api/catalog", {
+      method: "PUT",
+      body: JSON.stringify(merged),
+      adminToken: process.env.ADMIN_TOKEN?.trim(),
+    });
+    const saveBody = await saveRes.text();
+    const payload = parseSaveResponse(saveBody, saveRes, parsed);
 
-      const saveRes = await workerFetch("/api/catalog", {
-        method: "PUT",
-        body: JSON.stringify(merged),
-        adminToken: process.env.ADMIN_TOKEN?.trim(),
-      });
-      const saveBody = await saveRes.text();
-      let payload;
-      try {
-        payload = JSON.parse(saveBody);
-      } catch {
-        payload = { ok: saveRes.ok };
-      }
-      if (saveRes.ok) {
-        payload.imported = {
-          totalProducts: parsed.totalProducts,
-          categories: parsed.categories.length,
-        };
-      }
-      res.setHeader("Content-Type", "application/json; charset=utf-8");
-      return res.status(saveRes.status).send(JSON.stringify(payload));
-    }
-
-    return res.status(400).json({ error: "action debe ser preview o import" });
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.status(saveRes.status).send(JSON.stringify(payload));
   } catch (err) {
     console.error("[admin/import-pdf]", err);
     return res.status(500).json({

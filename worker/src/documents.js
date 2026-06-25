@@ -73,6 +73,58 @@ function isAdmin(request, env) {
   return Boolean(env.ADMIN_TOKEN && token === env.ADMIN_TOKEN);
 }
 
+async function readPdfFromJson(request, json) {
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return { response: json({ error: "JSON inválido" }, 400) };
+  }
+
+  if (!payload.data) {
+    return { response: json({ error: "Falta el campo data (PDF en base64)" }, 400) };
+  }
+
+  let buffer;
+  try {
+    const binary = Uint8Array.from(atob(payload.data), (c) => c.charCodeAt(0));
+    buffer = binary.buffer;
+  } catch {
+    return { response: json({ error: "Base64 inválido" }, 400) };
+  }
+
+  return {
+    title: (payload.title || payload.filename || "Catálogo PDF").toString(),
+    filename: (payload.filename || "catalogo.pdf").toString(),
+    buffer,
+  };
+}
+
+async function readPdfFromMultipart(request, json) {
+  let formData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return { response: json({ error: "Formato inválido" }, 400) };
+  }
+
+  const file = formData.get("file");
+  if (!file || typeof file === "string") {
+    return { response: json({ error: "Seleccioná un archivo PDF" }, 400) };
+  }
+
+  const mime = file.type || "application/octet-stream";
+  if (mime !== "application/pdf") {
+    return { response: json({ error: "Solo se permiten archivos PDF" }, 400) };
+  }
+
+  return {
+    title: (formData.get("title") || file?.name || "Catálogo PDF").toString(),
+    filename: file.name || "catalogo.pdf",
+    buffer: await file.arrayBuffer(),
+  };
+}
+
 /** POST /api/admin/documents — subir PDF (multipart o JSON base64) */
 export async function handleDocumentUpload(request, env, json, corsHeaders) {
   if (!isAdmin(request, env)) {
@@ -80,53 +132,13 @@ export async function handleDocumentUpload(request, env, json, corsHeaders) {
   }
 
   const contentType = request.headers.get("Content-Type") || "";
-  let title;
-  let filename;
-  let buffer;
+  const upload = contentType.includes("application/json")
+    ? await readPdfFromJson(request, json)
+    : await readPdfFromMultipart(request, json);
 
-  if (contentType.includes("application/json")) {
-    let payload;
-    try {
-      payload = await request.json();
-    } catch {
-      return json({ error: "JSON inválido" }, 400);
-    }
+  if (upload.response) return upload.response;
 
-    title = (payload.title || payload.filename || "Catálogo PDF").toString();
-    filename = (payload.filename || "catalogo.pdf").toString();
-    if (!payload.data) {
-      return json({ error: "Falta el campo data (PDF en base64)" }, 400);
-    }
-
-    try {
-      const binary = Uint8Array.from(atob(payload.data), (c) => c.charCodeAt(0));
-      buffer = binary.buffer;
-    } catch {
-      return json({ error: "Base64 inválido" }, 400);
-    }
-  } else {
-    let formData;
-    try {
-      formData = await request.formData();
-    } catch {
-      return json({ error: "Formato inválido" }, 400);
-    }
-
-    const file = formData.get("file");
-    title = (formData.get("title") || file?.name || "Catálogo PDF").toString();
-
-    if (!file || typeof file === "string") {
-      return json({ error: "Seleccioná un archivo PDF" }, 400);
-    }
-
-    const mime = file.type || "application/octet-stream";
-    if (mime !== "application/pdf") {
-      return json({ error: "Solo se permiten archivos PDF" }, 400);
-    }
-
-    filename = file.name || "catalogo.pdf";
-    buffer = await file.arrayBuffer();
-  }
+  const { title, filename, buffer } = upload;
 
   const maxBytes = 10 * 1024 * 1024;
   if (buffer.byteLength > maxBytes) {

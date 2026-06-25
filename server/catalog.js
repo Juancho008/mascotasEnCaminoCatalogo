@@ -13,9 +13,8 @@ function readJson(filePath, fallback = {}) {
     const raw = fs.readFileSync(filePath, "utf-8");
     return JSON.parse(raw);
   } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.warn(`[catalog] No se pudo leer ${filePath}:`, err.message);
-    }
+    if (err.code === "ENOENT") return fallback;
+    console.warn(`[catalog] No se pudo leer ${filePath}:`, err.message);
     return fallback;
   }
 }

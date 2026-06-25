@@ -22,6 +22,30 @@ function createHmacHeaders(secret, method, pathname) {
   };
 }
 
+function parseWorkerError(body, status) {
+  let detail = body;
+  try {
+    detail = JSON.parse(body).error || body;
+  } catch {
+    /* respuesta no JSON */
+  }
+
+  if (status === 401) {
+    return "Firma HMAC rechazada por Cloudflare. Verificá que CATALOG_HMAC_SECRET sea idéntico en Vercel y Cloudflare, y que CATALOG_WORKER_URL sea solo el dominio del Worker (sin /catalog.json).";
+  }
+
+  return detail || "El Worker rechazó la solicitud";
+}
+
+function isValidJson(text) {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Método no permitido" });
@@ -42,23 +66,12 @@ module.exports = async (req, res) => {
     const body = await response.text();
 
     if (!response.ok) {
-      let detail = body;
-      try {
-        detail = JSON.parse(body).error || body;
-      } catch {
-        /* no JSON */
-      }
       return res.status(response.status).json({
-        error:
-          response.status === 401
-            ? "Firma HMAC rechazada por Cloudflare. Verificá que CATALOG_HMAC_SECRET sea idéntico en Vercel y Cloudflare, y que CATALOG_WORKER_URL sea solo el dominio del Worker (sin /catalog.json)."
-            : detail || "El Worker rechazó la solicitud",
+        error: parseWorkerError(body, response.status),
       });
     }
 
-    try {
-      JSON.parse(body);
-    } catch {
+    if (!isValidJson(body)) {
       console.error("[api/catalog] Respuesta no JSON del Worker:", body.slice(0, 120));
       return res.status(502).json({
         error: "El Worker devolvió una respuesta inválida",

@@ -21,25 +21,26 @@ function reducer(state, action) {
     case "ADD": {
       const { product } = action;
       const existing = state.items.find((i) => i.id === product.id);
-      if (existing) {
+      if (!existing) {
         return {
-          items: state.items.map((i) =>
-            i.id === product.id ? { ...i, qty: i.qty + 1 } : i
-          ),
+          items: [
+            ...state.items,
+            {
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              image: product.image,
+              category: product.category,
+              qty: 1,
+            },
+          ],
         };
       }
+
       return {
-        items: [
-          ...state.items,
-          {
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            image: product.image,
-            category: product.category,
-            qty: 1,
-          },
-        ],
+        items: state.items.map((i) =>
+          i.id === product.id ? { ...i, qty: i.qty + 1 } : i
+        ),
       };
     }
     case "INCREMENT":

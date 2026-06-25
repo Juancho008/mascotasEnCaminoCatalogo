@@ -8,13 +8,13 @@ export default function CartDrawer({ open, onClose, site }) {
 
   const handleCheckout = () => {
     if (items.length === 0) return;
+
     const url = buildWhatsAppLink(site, items, totalPrice);
     const win = window.open(url, "_blank", "noopener,noreferrer");
-    // Si el navegador bloquea la pestaña nueva (popup blocker, móviles, etc.),
-    // abrimos WhatsApp en la misma pestaña como respaldo.
-    if (!win || win.closed || typeof win.closed === "undefined") {
-      window.location.href = url;
-    }
+    const blocked = !win || win.closed || typeof win.closed === "undefined";
+    if (!blocked) return;
+
+    window.location.href = url;
   };
 
   return (

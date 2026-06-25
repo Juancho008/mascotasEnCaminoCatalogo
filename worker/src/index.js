@@ -38,6 +38,44 @@ function isCatalogPath(pathname) {
   return pathname === "/catalog.json" || pathname === "/api/catalog";
 }
 
+async function handleCatalogGet(request, env) {
+  const authorized = await verifyHmac(request, env.CATALOG_HMAC_SECRET);
+  if (!authorized) return json({ error: "No autorizado" }, 401);
+
+  const raw = await env.KV_BINDING.get(CATALOG_KEY);
+  if (!raw) {
+    return json(
+      { error: "Catálogo no encontrado en KV. Ejecutá: npm run kv:sync" },
+      404
+    );
+  }
+
+  return new Response(raw, {
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store, must-revalidate",
+      ...corsHeaders,
+    },
+  });
+}
+
+async function handleCatalogPut(request, env) {
+  const token = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
+    return json({ error: "No autorizado" }, 401);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "JSON inválido" }, 400);
+  }
+
+  await env.KV_BINDING.put(CATALOG_KEY, JSON.stringify(body));
+  return json({ ok: true, key: CATALOG_KEY });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -85,43 +123,11 @@ export default {
     }
 
     if (request.method === "GET") {
-      const authorized = await verifyHmac(request, env.CATALOG_HMAC_SECRET);
-      if (!authorized) {
-        return json({ error: "No autorizado" }, 401);
-      }
-
-      const raw = await env.KV_BINDING.get(CATALOG_KEY);
-      if (!raw) {
-        return json(
-          { error: "Catálogo no encontrado en KV. Ejecutá: npm run kv:sync" },
-          404
-        );
-      }
-
-      return new Response(raw, {
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          "Cache-Control": "no-store, must-revalidate",
-          ...corsHeaders,
-        },
-      });
+      return handleCatalogGet(request, env);
     }
 
     if (request.method === "PUT") {
-      const token = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-      if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) {
-        return json({ error: "No autorizado" }, 401);
-      }
-
-      let body;
-      try {
-        body = await request.json();
-      } catch {
-        return json({ error: "JSON inválido" }, 400);
-      }
-
-      await env.KV_BINDING.put(CATALOG_KEY, JSON.stringify(body));
-      return json({ ok: true, key: CATALOG_KEY });
+      return handleCatalogPut(request, env);
     }
 
     return json({ error: "Método no permitido" }, 405);

@@ -12,6 +12,7 @@ import DocumentsSection from "./components/DocumentsSection.jsx";
 import WeekendDeliveryBanner from "./components/WeekendDeliveryBanner.jsx";
 import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
 import { isCategoryEnabled, getCatalogNavGroups } from "./utils/catalogGroups.js";
+import { applyStorePricing } from "./utils/storePricing.js";
 
 const isAdminRoute =
   typeof window !== "undefined" &&
@@ -55,25 +56,23 @@ async function fetchCatalog(url) {
   });
   const text = await r.text();
 
-  if (!r.ok) {
-    let detail = "";
-    try {
-      detail = JSON.parse(text).error || "";
-    } catch {
-      detail = text.slice(0, 120);
-    }
+  if (r.ok) return parseCatalogResponse(text);
 
-    if (r.status === 401) {
-      throw new Error(
-        detail ||
-          "Firma HMAC rechazada. Verificá CATALOG_HMAC_SECRET (mismo valor en Vercel y Cloudflare) y CATALOG_WORKER_URL (solo dominio, sin /catalog.json)."
-      );
-    }
-
-    throw new Error(detail || `No se pudo cargar el catálogo (HTTP ${r.status})`);
+  let detail = "";
+  try {
+    detail = JSON.parse(text).error || "";
+  } catch {
+    detail = text.slice(0, 120);
   }
 
-  return parseCatalogResponse(text);
+  if (r.status === 401) {
+    throw new Error(
+      detail ||
+        "Firma HMAC rechazada. Verificá CATALOG_HMAC_SECRET (mismo valor en Vercel y Cloudflare) y CATALOG_WORKER_URL (solo dominio, sin /catalog.json)."
+    );
+  }
+
+  throw new Error(detail || `No se pudo cargar el catálogo (HTTP ${r.status})`);
 }
 
 export default function App() {
@@ -93,7 +92,7 @@ export default function App() {
       catalogUrl !== "/catalog.json" ? "/catalog.json" : null;
 
     function applyCatalog(data) {
-      const catalogData = sanitizeCatalog(data);
+      const catalogData = applyStorePricing(sanitizeCatalog(data));
       setCatalog(catalogData);
       setError(null);
       applyTheme(catalogData.site?.theme);
@@ -170,12 +169,9 @@ export default function App() {
     const group =
       navGroups.find((g) => g.key === activeGroupKey) || navGroups[0];
     if (!group) return [];
-
     if (!group.hasMultiple) return group.categories;
+    if (activeSubId) return group.categories.filter((c) => c.id === activeSubId);
 
-    if (activeSubId) {
-      return group.categories.filter((c) => c.id === activeSubId);
-    }
     return [group.categories[0]].filter(Boolean);
   }, [searchActive, filteredCategories, navGroups, activeGroupKey, activeSubId]);
 

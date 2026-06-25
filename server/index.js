@@ -63,12 +63,12 @@ function checkAdmin(req, res) {
     res.status(500).json({ error: "Falta ADMIN_PASSWORD en .env" });
     return false;
   }
+
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, "");
-  if (token !== expected) {
-    res.status(401).json({ error: "Contraseña incorrecta" });
-    return false;
-  }
-  return true;
+  if (token === expected) return true;
+
+  res.status(401).json({ error: "Contraseña incorrecta" });
+  return false;
 }
 
 function workerBaseUrl() {
@@ -227,6 +227,10 @@ app.post("/api/admin/import-pdf", express.json({ limit: "15mb" }), async (req, r
       });
     }
 
+    if (action !== "import") {
+      return res.status(400).json({ error: "action debe ser preview o import" });
+    }
+
     const base = workerBaseUrl();
     const secret = process.env.CATALOG_HMAC_SECRET?.trim();
     const adminToken = process.env.ADMIN_TOKEN?.trim();
@@ -269,21 +273,29 @@ app.use("/images", express.static(path.join(ROOT_DIR, "images"), { maxAge: "1d" 
 
 // Cliente compilado (producción).
 const clientDist = path.join(ROOT_DIR, "client", "dist");
-if (fs.existsSync(clientDist)) {
+
+function registerClientRoutes() {
+  if (!fs.existsSync(clientDist)) {
+    app.get("/", (req, res) => {
+      res.send(
+        "<h1>Servidor activo 🐾</h1><p>El cliente no está compilado todavía. Ejecutá <code>npm run dev</code> para desarrollo o <code>npm run build</code> para producción.</p>"
+      );
+    });
+    return;
+  }
+
   app.use(express.static(clientDist));
   app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api/") || req.path.startsWith("/inventory/") || req.path.startsWith("/images/")) {
-      return next();
-    }
+    const isApiOrAsset =
+      req.path.startsWith("/api/") ||
+      req.path.startsWith("/inventory/") ||
+      req.path.startsWith("/images/");
+    if (isApiOrAsset) return next();
     res.sendFile(path.join(clientDist, "index.html"));
   });
-} else {
-  app.get("/", (req, res) => {
-    res.send(
-      "<h1>Servidor activo 🐾</h1><p>El cliente no está compilado todavía. Ejecutá <code>npm run dev</code> para desarrollo o <code>npm run build</code> para producción.</p>"
-    );
-  });
 }
+
+registerClientRoutes();
 
 app.listen(PORT, () => {
   console.log(`\n🐾 Catálogo Mascotas en Camino`);

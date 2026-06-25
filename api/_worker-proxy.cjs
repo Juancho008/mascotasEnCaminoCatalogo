@@ -50,9 +50,11 @@ async function workerFetch(pathname, { method = "GET", body, useHmac = false, ad
 function checkAdminPassword(req) {
   const expected = process.env.ADMIN_PASSWORD?.trim();
   if (!expected) return { ok: false, error: "Falta ADMIN_PASSWORD en Vercel" };
+
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, "");
-  if (token !== expected) return { ok: false, error: "Contraseña incorrecta" };
-  return { ok: true };
+  if (token === expected) return { ok: true };
+
+  return { ok: false, error: "Contraseña incorrecta" };
 }
 
 module.exports = {

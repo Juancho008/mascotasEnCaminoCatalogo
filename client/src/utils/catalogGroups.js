@@ -11,36 +11,49 @@ function cleanLegacyText(text) {
   return cleanLegacyBrandText(text);
 }
 
+function cloneCategoryForEditor(cat) {
+  const clone = structuredClone(cat);
+  clone.description = cleanLegacyText(clone.description);
+  clone.products = (clone.products || []).map((p) => ({
+    ...p,
+    description: cleanLegacyText(p.description),
+  }));
+  return clone;
+}
+
+function ensureParentGroup(groupsMap, parentId, label) {
+  if (groupsMap.has(parentId)) return;
+  groupsMap.set(parentId, {
+    id: parentId,
+    label,
+    subcategories: [],
+  });
+}
+
+function addCategoryToGroups(groupsMap, cat) {
+  const clone = cloneCategoryForEditor(cat);
+
+  if (!cat.group) {
+    const id = cat.groupId || slugify(cat.label);
+    groupsMap.set(id, {
+      id,
+      label: cat.label,
+      subcategories: [clone],
+    });
+    return;
+  }
+
+  const parentId = cat.groupId || slugify(cat.group);
+  ensureParentGroup(groupsMap, parentId, cat.group);
+  groupsMap.get(parentId).subcategories.push(clone);
+}
+
 /** Catálogo plano (KV) → grupos con subcategorías para el editor. */
 export function catalogToGroups(catalog) {
   const groupsMap = new Map();
 
   for (const cat of catalog?.categories || []) {
-    const clone = structuredClone(cat);
-    clone.description = cleanLegacyText(clone.description);
-    clone.products = (clone.products || []).map((p) => ({
-      ...p,
-      description: cleanLegacyText(p.description),
-    }));
-
-    if (cat.group) {
-      const parentId = cat.groupId || slugify(cat.group);
-      if (!groupsMap.has(parentId)) {
-        groupsMap.set(parentId, {
-          id: parentId,
-          label: cat.group,
-          subcategories: [],
-        });
-      }
-      groupsMap.get(parentId).subcategories.push(clone);
-    } else {
-      const id = cat.groupId || slugify(cat.label);
-      groupsMap.set(id, {
-        id,
-        label: cat.label,
-        subcategories: [clone],
-      });
-    }
+    addCategoryToGroups(groupsMap, cat);
   }
 
   return {
@@ -128,6 +141,11 @@ export function emptyGroup() {
   };
 }
 
+function ensureDisplayGroup(map, key, title) {
+  if (map.has(key)) return;
+  map.set(key, { key, title, categories: [] });
+}
+
 /** Agrupa categorías planas para mostrar en la tienda. */
 export function groupCategoriesForDisplay(categories) {
   const map = new Map();
@@ -135,10 +153,7 @@ export function groupCategoriesForDisplay(categories) {
   for (const cat of categories || []) {
     const key = cat.groupId || cat.group || cat.id;
     const title = cat.group || null;
-
-    if (!map.has(key)) {
-      map.set(key, { key, title, categories: [] });
-    }
+    ensureDisplayGroup(map, key, title);
     map.get(key).categories.push(cat);
   }
 

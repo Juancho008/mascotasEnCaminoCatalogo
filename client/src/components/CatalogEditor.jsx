@@ -12,6 +12,26 @@ function sectionId(gi, si) {
   return `g-${gi}-s-${si}`;
 }
 
+function mapAtIndex(items, index, updater) {
+  return items.map((item, i) => (i === index ? updater(item) : item));
+}
+
+function updateSubcategoriesAt(groups, gi, updater) {
+  return mapAtIndex(groups, gi, (group) => ({
+    ...group,
+    subcategories: updater(group.subcategories),
+  }));
+}
+
+function updateProductsAt(groups, gi, si, updater) {
+  return updateSubcategoriesAt(groups, gi, (subs) =>
+    mapAtIndex(subs, si, (sub) => ({
+      ...sub,
+      products: updater(sub.products),
+    }))
+  );
+}
+
 export default function CatalogEditor({
   editorState,
   onChange,
@@ -76,45 +96,27 @@ export default function CatalogEditor({
   }
 
   function updateSubcategory(gi, si, patch) {
-    const next = groups.map((g, i) => {
-      if (i !== gi) return g;
-      const subs = g.subcategories.map((s, j) =>
-        j === si ? { ...s, ...patch } : s
-      );
-      return { ...g, subcategories: subs };
-    });
-    updateGroups(next);
+    updateGroups(
+      updateSubcategoriesAt(groups, gi, (subs) =>
+        mapAtIndex(subs, si, (sub) => ({ ...sub, ...patch }))
+      )
+    );
   }
 
   function updateProduct(gi, si, pi, patch) {
-    const next = groups.map((g, i) => {
-      if (i !== gi) return g;
-      return {
-        ...g,
-        subcategories: g.subcategories.map((s, j) => {
-          if (j !== si) return s;
-          return {
-            ...s,
-            products: s.products.map((p, k) => (k === pi ? { ...p, ...patch } : p)),
-          };
-        }),
-      };
-    });
-    updateGroups(next);
+    updateGroups(
+      updateProductsAt(groups, gi, si, (products) =>
+        mapAtIndex(products, pi, (product) => ({ ...product, ...patch }))
+      )
+    );
   }
 
   function removeProduct(gi, si, pi) {
-    const next = groups.map((g, i) => {
-      if (i !== gi) return g;
-      return {
-        ...g,
-        subcategories: g.subcategories.map((s, j) => {
-          if (j !== si) return s;
-          return { ...s, products: s.products.filter((_, k) => k !== pi) };
-        }),
-      };
-    });
-    updateGroups(next);
+    updateGroups(
+      updateProductsAt(groups, gi, si, (products) =>
+        products.filter((_, k) => k !== pi)
+      )
+    );
   }
 
   function addProduct(gi, si) {
