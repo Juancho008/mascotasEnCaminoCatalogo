@@ -10,6 +10,8 @@ import Loader from "./components/Loader.jsx";
 import AdminPanel from "./AdminPanel.jsx";
 import DocumentsSection from "./components/DocumentsSection.jsx";
 import WeekendDeliveryBanner from "./components/WeekendDeliveryBanner.jsx";
+import RescuedAnimalsFlyer from "./components/RescuedAnimalsFlyer.jsx";
+import MobileCartFab from "./components/MobileCartFab.jsx";
 import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
 import { isCategoryEnabled, getCatalogNavGroups } from "./utils/catalogGroups.js";
 import { applyStorePricing } from "./utils/storePricing.js";
@@ -223,6 +225,8 @@ export default function App() {
       <main>
         <Hero site={site} />
 
+        <RescuedAnimalsFlyer />
+
         <DocumentsSection documents={catalog.documents} />
 
         <CatalogNav
@@ -280,6 +284,8 @@ export default function App() {
         onClose={() => setCartOpen(false)}
         site={site}
       />
+
+      <MobileCartFab onOpenCart={() => setCartOpen(true)} site={site} />
     </>
   );
 }

@@ -16,7 +16,7 @@ export default function Header({ site, onOpenCart, query, onQueryChange }) {
           <span className="search-icon">🔎</span>
           <input
             type="search"
-            placeholder="Buscar productos..."
+            placeholder="Buscar producto..."
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             aria-label="Buscar productos"
@@ -32,6 +32,7 @@ export default function Header({ site, onOpenCart, query, onQueryChange }) {
         >
           <span className="cart-icon">🛒</span>
           <span className="cart-label">Carrito</span>
+          <span className="cart-label-mobile">Carrito</span>
           {totalItems > 0 && (
             <motion.span
               key={totalItems}

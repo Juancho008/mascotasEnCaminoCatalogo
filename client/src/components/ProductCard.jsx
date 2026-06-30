@@ -81,7 +81,7 @@ export default function ProductCard({ product, site }) {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0, opacity: 0 }}
                 >
-                  + Agregar
+                  + Agregar al carrito
                 </motion.span>
               )}
             </AnimatePresence>
