@@ -85,6 +85,8 @@ export default function App() {
   const [activeGroupKey, setActiveGroupKey] = useState(null);
   const [activeSubId, setActiveSubId] = useState(null);
   const [query, setQuery] = useState("");
+  const [assetsReady, setAssetsReady] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
 
   const catalogUrl = import.meta.env.VITE_CATALOG_API || "/api/catalog";
 
@@ -136,6 +138,55 @@ export default function App() {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [catalogUrl]);
+
+  // Precarga el logo y todas las imágenes de productos antes de mostrar el catálogo,
+  // así el usuario ve la animación de carga hasta que todo está listo.
+  useEffect(() => {
+    if (!catalog || assetsReady) return;
+    let cancelled = false;
+
+    const urls = new Set();
+    if (catalog.site?.logo) urls.add(catalog.site.logo);
+    for (const cat of catalog.categories || []) {
+      for (const product of cat.products || []) {
+        if (product.image) urls.add(product.image);
+      }
+    }
+
+    const list = [...urls];
+    const total = list.length;
+
+    if (total === 0) {
+      setLoadProgress(100);
+      setAssetsReady(true);
+      return;
+    }
+
+    let loaded = 0;
+    const bump = () => {
+      if (cancelled) return;
+      loaded += 1;
+      setLoadProgress(Math.round((loaded / total) * 100));
+      if (loaded >= total) setAssetsReady(true);
+    };
+
+    list.forEach((src) => {
+      const img = new Image();
+      img.onload = bump;
+      img.onerror = bump;
+      img.src = src;
+    });
+
+    // Red de seguridad: si alguna imagen tarda demasiado, no bloqueamos la tienda.
+    const timeout = setTimeout(() => {
+      if (!cancelled) setAssetsReady(true);
+    }, 8000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [catalog, assetsReady]);
 
   const visibleCategories = useMemo(() => {
     if (!catalog) return [];
@@ -209,7 +260,15 @@ export default function App() {
     );
   }
 
-  if (!catalog) return <Loader />;
+  if (!catalog || !assetsReady) {
+    return (
+      <Loader
+        logo={catalog?.site?.logo}
+        storeName={catalog?.site?.storeName}
+        progress={catalog ? loadProgress : null}
+      />
+    );
+  }
 
   const { site } = catalog;
 
