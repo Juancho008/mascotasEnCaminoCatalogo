@@ -32,9 +32,17 @@ export default function ProductCard({ product, site }) {
       variants={cardVariants}
       whileHover={{ y: -6 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      itemScope
+      itemType="https://schema.org/Product"
     >
       <div className="card-image-wrap">
-        <img className="card-image" src={product.image} alt={product.name} loading="lazy" />
+        <img
+          className="card-image"
+          src={product.image}
+          alt={product.name}
+          loading="lazy"
+          itemProp="image"
+        />
         {product.tags?.length > 0 && (
           <div className="card-tags">
             {product.tags.map((t) => (
@@ -47,14 +55,24 @@ export default function ProductCard({ product, site }) {
       </div>
 
       <div className="card-body">
-        <h3 className="card-name">{product.name}</h3>
+        <h3 className="card-name" itemProp="name">
+          {product.name}
+        </h3>
         {product.description && (
           <p className="card-desc">{product.description}</p>
         )}
 
         <div className="card-footer">
-          <span className="card-price">
-            {product.price > 0 ? formatPrice(product.price, site) : "Consultar"}
+          <span className="card-price" itemProp="offers" itemScope itemType="https://schema.org/Offer">
+            <meta itemProp="priceCurrency" content="ARS" />
+            {product.price > 0 ? (
+              <>
+                <meta itemProp="price" content={String(product.price)} />
+                {formatPrice(product.price, site)}
+              </>
+            ) : (
+              "Consultar"
+            )}
           </span>
 
           <motion.button

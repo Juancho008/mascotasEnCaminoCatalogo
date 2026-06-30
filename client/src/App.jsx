@@ -15,6 +15,7 @@ import MobileCartFab from "./components/MobileCartFab.jsx";
 import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
 import { isCategoryEnabled, getCatalogNavGroups } from "./utils/catalogGroups.js";
 import { applyStorePricing } from "./utils/storePricing.js";
+import { applyStoreSeo } from "./utils/seo.js";
 
 const isAdminRoute =
   typeof window !== "undefined" &&
@@ -100,7 +101,7 @@ export default function App() {
       setCatalog(catalogData);
       setError(null);
       applyTheme(catalogData.site?.theme);
-      if (catalogData.site?.storeName) document.title = catalogData.site.storeName;
+      applyStoreSeo(catalogData);
       const groups = getCatalogNavGroups(
         catalogData.categories.filter(isCategoryEnabled)
       );

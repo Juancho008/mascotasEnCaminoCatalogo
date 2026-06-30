@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /admin/
+
+Sitemap: https://mascotas-en-camino-catalogo-eight.vercel.app/sitemap.xml

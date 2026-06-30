@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import CatalogEditor from "./components/CatalogEditor.jsx";
 import { catalogToGroups, groupsToCatalog } from "./utils/catalogGroups.js";
 import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
+import { applyAdminNoIndex } from "./utils/seo.js";
 
 const STORAGE_KEY = "mec_admin_token";
 
@@ -23,6 +24,10 @@ export default function AdminPanel() {
 
   const [importFile, setImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState(null);
+
+  useEffect(() => {
+    applyAdminNoIndex();
+  }, []);
 
   useEffect(() => {
     if (!token) return;

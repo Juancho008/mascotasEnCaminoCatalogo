@@ -35,10 +35,45 @@ fs.writeFileSync(
 copyDir(inventoryAbsoluteDir(), path.join(publicDir, "inventory"));
 copyDir(path.join(ROOT_DIR, "images"), path.join(publicDir, "images"));
 
+const siteUrl = (
+  process.env.SITE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+  "https://mascotas-en-camino-catalogo-eight.vercel.app"
+).replace(/\/$/, "");
+
+fs.writeFileSync(
+  path.join(publicDir, "robots.txt"),
+  `User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /admin/
+
+Sitemap: ${siteUrl}/sitemap.xml
+`,
+  "utf-8"
+);
+
+const lastmod = new Date().toISOString().slice(0, 10);
+fs.writeFileSync(
+  path.join(publicDir, "sitemap.xml"),
+  `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${siteUrl}/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+`,
+  "utf-8"
+);
+
 const totalProducts = catalog.categories.reduce(
   (n, c) => n + c.products.length,
   0
 );
 console.log(
-  `[build-static] OK · ${catalog.categories.length} categoría(s), ${totalProducts} producto(s).`
+  `[build-static] OK · ${catalog.categories.length} categoría(s), ${totalProducts} producto(s), SEO → ${siteUrl}.`
 );
