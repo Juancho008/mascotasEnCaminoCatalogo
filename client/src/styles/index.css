@@ -1018,37 +1018,37 @@ img {
 }
 
 @media (max-width: 640px) {
-  /* Header: logo + carrito / búsqueda full width */
+  /* Header: logo | buscar | carrito en una fila */
   .header-inner {
-    grid-template-columns: auto auto;
-    grid-template-areas:
-      "brand cart"
-      "search search";
-    gap: 0.65rem 0.75rem;
-    padding: 0.7rem 1rem 0.8rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "brand search cart";
+    gap: 0.55rem;
+    padding: 0.65rem 0.85rem;
+    align-items: center;
   }
   .brand { grid-area: brand; }
   .search {
     grid-area: search;
     max-width: none;
     width: 100%;
-    padding: 0.7rem 0.95rem;
+    min-width: 0;
+    padding: 0.55rem 0.75rem;
     border-color: rgba(31, 58, 95, 0.1);
   }
-  .search input { font-size: 1.02rem; }
+  .search input { font-size: 0.95rem; }
   .cart-button {
     grid-area: cart;
     justify-self: end;
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 2.65rem;
+    height: 2.65rem;
     padding: 0;
     justify-content: center;
     border-radius: 50%;
   }
   .brand-name,
   .cart-label { display: none; }
-  .brand-logo { width: 40px; height: 40px; }
-  .cart-icon { font-size: 1.15rem; }
+  .brand-logo { width: 38px; height: 38px; }
+  .cart-icon { font-size: 1.1rem; }
 
   .hero { padding: 0.9rem 1rem 0.65rem; }
   .hero-logo { width: 64px; height: 64px; margin-bottom: 0.35rem; }
@@ -1111,7 +1111,7 @@ img {
   }
 
   .catalog-nav {
-    top: 108px;
+    top: 62px;
     margin-top: 0.15rem;
     padding: 0.7rem 0 0.75rem;
   }
