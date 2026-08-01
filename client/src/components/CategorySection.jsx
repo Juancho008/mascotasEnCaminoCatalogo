@@ -4,7 +4,7 @@ import ProductCard from "./ProductCard.jsx";
 const gridVariants = {
   hidden: {},
   show: {
-    transition: { staggerChildren: 0.06 },
+    transition: { staggerChildren: 0.04 },
   },
 };
 

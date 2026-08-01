@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useCart } from "../context/CartContext.jsx";
+import { useCart } from "../hooks";
 import { formatPrice } from "../utils.js";
 
 export default function MobileCartFab({ onOpenCart, site }) {

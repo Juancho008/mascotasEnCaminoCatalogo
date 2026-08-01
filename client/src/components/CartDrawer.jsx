@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useCart } from "../context/CartContext.jsx";
+import { useCart } from "../hooks";
 import { buildWhatsAppLink, formatPrice } from "../utils.js";
 
 export default function CartDrawer({ open, onClose, site }) {

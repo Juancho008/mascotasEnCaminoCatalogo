@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Header from "./components/Header.jsx";
 import Hero from "./components/Hero.jsx";
@@ -12,244 +12,36 @@ import DocumentsSection from "./components/DocumentsSection.jsx";
 import WeekendDeliveryBanner from "./components/WeekendDeliveryBanner.jsx";
 import RescuedAnimalsFlyer from "./components/RescuedAnimalsFlyer.jsx";
 import MobileCartFab from "./components/MobileCartFab.jsx";
-import { sanitizeCatalog } from "./utils/sanitizeCatalog.js";
-import { isCategoryEnabled, getCatalogNavGroups } from "./utils/catalogGroups.js";
-import { applyStorePricing } from "./utils/storePricing.js";
-import { applyStoreSeo } from "./utils/seo.js";
+import { useCatalogLoader, useAssetPreloader, useCatalogDisplay } from "./hooks";
+import { useAppDispatch, useAppSelector } from "./store/hooks";
+import { selectCatalog } from "./store/slices/catalogSlice";
+import { closeCart, openCart, selectUi, setQuery } from "./store/slices/uiSlice";
 
 const isAdminRoute =
   typeof window !== "undefined" &&
   (window.location.pathname === "/admin" ||
     window.location.pathname.startsWith("/admin/"));
 
-function applyTheme(theme = {}) {
-  const root = document.documentElement;
-  const map = {
-    "--color-primary": theme.primary,
-    "--color-secondary": theme.secondary,
-    "--color-accent": theme.accent,
-    "--color-bg": theme.background,
-    "--color-surface": theme.surface,
-    "--color-text": theme.text,
-    "--color-muted": theme.muted,
-  };
-  Object.entries(map).forEach(([key, val]) => {
-    if (val) root.style.setProperty(key, val);
-  });
-}
-
-function parseCatalogResponse(text) {
-  const trimmed = text.trim();
-  if (!trimmed || trimmed.startsWith("<")) {
-    throw new Error(
-      "El servidor devolvió HTML en lugar de JSON. Verificá que /api/catalog esté desplegado en Vercel y que existan CATALOG_WORKER_URL y CATALOG_HMAC_SECRET."
-    );
-  }
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    throw new Error("Respuesta del catálogo no es JSON válido");
-  }
-}
-
-async function fetchCatalog(url) {
-  const r = await fetch(url, {
-    cache: "no-store",
-    headers: { "Cache-Control": "no-cache" },
-  });
-  const text = await r.text();
-
-  if (r.ok) return parseCatalogResponse(text);
-
-  let detail = "";
-  try {
-    detail = JSON.parse(text).error || "";
-  } catch {
-    detail = text.slice(0, 120);
-  }
-
-  if (r.status === 401) {
-    throw new Error(
-      detail ||
-        "Firma HMAC rechazada. Verificá CATALOG_HMAC_SECRET (mismo valor en Vercel y Cloudflare) y CATALOG_WORKER_URL (solo dominio, sin /catalog.json)."
-    );
-  }
-
-  throw new Error(detail || `No se pudo cargar el catálogo (HTTP ${r.status})`);
-}
-
 export default function App() {
   if (isAdminRoute) return <AdminPanel />;
-  const [catalog, setCatalog] = useState(null);
-  const [error, setError] = useState(null);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [activeGroupKey, setActiveGroupKey] = useState(null);
-  const [activeSubId, setActiveSubId] = useState(null);
-  const [query, setQuery] = useState("");
-  const [assetsReady, setAssetsReady] = useState(false);
-  const [loadProgress, setLoadProgress] = useState(0);
 
-  const catalogUrl = import.meta.env.VITE_CATALOG_API || "/api/catalog";
+  useCatalogLoader();
+  useAssetPreloader();
 
-  useEffect(() => {
-    let cancelled = false;
-    const fallbackUrl =
-      catalogUrl !== "/catalog.json" ? "/catalog.json" : null;
+  const dispatch = useAppDispatch();
+  const { data: catalog, error, assetsReady, loadProgress } =
+    useAppSelector(selectCatalog);
+  const { cartOpen, query } = useAppSelector(selectUi);
 
-    function applyCatalog(data) {
-      const catalogData = applyStorePricing(sanitizeCatalog(data));
-      setCatalog(catalogData);
-      setError(null);
-      applyTheme(catalogData.site?.theme);
-      applyStoreSeo(catalogData);
-      const groups = getCatalogNavGroups(
-        catalogData.categories.filter(isCategoryEnabled)
-      );
-      if (groups.length) {
-        const first = groups[0];
-        setActiveGroupKey(first.key);
-        setActiveSubId(first.hasMultiple ? first.categories[0]?.id : null);
-      }
-    }
-
-    function loadCatalog() {
-      return fetchCatalog(catalogUrl)
-        .catch((err) => {
-          if (!fallbackUrl) throw err;
-          console.warn("[catalog] API falló, usando catalog.json estático:", err.message);
-          return fetchCatalog(fallbackUrl);
-        })
-        .then((data) => {
-          if (!cancelled) applyCatalog(data);
-        })
-        .catch((err) => {
-          if (!cancelled) setError(err.message);
-        });
-    }
-
-    loadCatalog();
-
-    function onVisible() {
-      if (document.visibilityState === "visible") loadCatalog();
-    }
-    document.addEventListener("visibilitychange", onVisible);
-
-    return () => {
-      cancelled = true;
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [catalogUrl]);
-
-  // Precarga el logo y todas las imágenes de productos antes de mostrar el catálogo,
-  // así el usuario ve la animación de carga hasta que todo está listo.
-  useEffect(() => {
-    if (!catalog || assetsReady) return;
-    let cancelled = false;
-
-    const urls = new Set();
-    if (catalog.site?.logo) urls.add(catalog.site.logo);
-    for (const cat of catalog.categories || []) {
-      for (const product of cat.products || []) {
-        if (product.image) urls.add(product.image);
-      }
-    }
-
-    const list = [...urls];
-    const total = list.length;
-
-    if (total === 0) {
-      setLoadProgress(100);
-      setAssetsReady(true);
-      return;
-    }
-
-    let loaded = 0;
-    const bump = () => {
-      if (cancelled) return;
-      loaded += 1;
-      setLoadProgress(Math.round((loaded / total) * 100));
-      if (loaded >= total) setAssetsReady(true);
-    };
-
-    list.forEach((src) => {
-      const img = new Image();
-      img.onload = bump;
-      img.onerror = bump;
-      img.src = src;
-    });
-
-    // Red de seguridad: si alguna imagen tarda demasiado, no bloqueamos la tienda.
-    const timeout = setTimeout(() => {
-      if (!cancelled) setAssetsReady(true);
-    }, 8000);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-  }, [catalog, assetsReady]);
-
-  const visibleCategories = useMemo(() => {
-    if (!catalog) return [];
-    return catalog.categories.filter(isCategoryEnabled);
-  }, [catalog]);
-
-  const navGroups = useMemo(
-    () => getCatalogNavGroups(visibleCategories),
-    [visibleCategories]
-  );
-
-  const searchActive = Boolean(query.trim());
-
-  const filteredCategories = useMemo(() => {
-    if (!catalog) return [];
-    const q = query.trim().toLowerCase();
-    if (!q) return visibleCategories;
-    return visibleCategories
-      .map((cat) => ({
-        ...cat,
-        products: cat.products.filter(
-          (p) =>
-            p.name.toLowerCase().includes(q) ||
-            p.description.toLowerCase().includes(q)
-        ),
-      }))
-      .filter((cat) => cat.products.length > 0);
-  }, [catalog, query, visibleCategories]);
-
-  const displayCategories = useMemo(() => {
-    if (searchActive) return filteredCategories;
-
-    const group =
-      navGroups.find((g) => g.key === activeGroupKey) || navGroups[0];
-    if (!group) return [];
-    if (!group.hasMultiple) return group.categories;
-    if (activeSubId) return group.categories.filter((c) => c.id === activeSubId);
-
-    return [group.categories[0]].filter(Boolean);
-  }, [searchActive, filteredCategories, navGroups, activeGroupKey, activeSubId]);
-
-  function handleSelectGroup(key) {
-    const group = navGroups.find((g) => g.key === key);
-    if (!group) return;
-    setActiveGroupKey(key);
-    setActiveSubId(group.hasMultiple ? group.categories[0]?.id : null);
-    scrollToCatalog();
-  }
-
-  function handleSelectSub(id) {
-    setActiveSubId(id);
-    scrollToCatalog();
-  }
-
-  function scrollToCatalog() {
-    requestAnimationFrame(() => {
-      document.querySelector(".catalog-container")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  }
+  const {
+    navGroups,
+    displayCategories,
+    searchActive,
+    activeGroupKey,
+    activeSubId,
+    handleSelectGroup,
+    handleSelectSub,
+  } = useCatalogDisplay();
 
   if (error) {
     return (
@@ -277,9 +69,9 @@ export default function App() {
     <>
       <Header
         site={site}
-        onOpenCart={() => setCartOpen(true)}
+        onOpenCart={() => dispatch(openCart())}
         query={query}
-        onQueryChange={setQuery}
+        onQueryChange={(value) => dispatch(setQuery(value))}
       />
 
       <main>
@@ -298,7 +90,11 @@ export default function App() {
           searchActive={searchActive}
         />
 
-        <WeekendDeliveryBanner />
+        <WeekendDeliveryBanner
+          visible={/alimento/i.test(
+            navGroups.find((g) => g.key === activeGroupKey)?.label || ""
+          )}
+        />
 
         <div className="catalog-container">
           <AnimatePresence mode="wait">
@@ -321,10 +117,10 @@ export default function App() {
             ) : (
               <motion.div
                 key={`${activeGroupKey}-${activeSubId}-${searchActive ? query : ""}`}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
               >
                 <CatalogGroupedView
                   categories={displayCategories}
@@ -341,11 +137,11 @@ export default function App() {
 
       <CartDrawer
         open={cartOpen}
-        onClose={() => setCartOpen(false)}
+        onClose={() => dispatch(closeCart())}
         site={site}
       />
 
-      <MobileCartFab onOpenCart={() => setCartOpen(true)} site={site} />
+      <MobileCartFab onOpenCart={() => dispatch(openCart())} site={site} />
     </>
   );
 }

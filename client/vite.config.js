@@ -5,8 +5,6 @@ const API_TARGET = process.env.API_TARGET || "http://localhost:4000";
 const CATALOG_PROXY_TARGET =
   process.env.CATALOG_PROXY_TARGET || process.env.VITE_CATALOG_API || API_TARGET;
 
-// En desarrollo, Vite sirve el frontend y hace proxy de la API y las imágenes
-// al servidor Express, así no hay problemas de CORS y todo corre junto.
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -20,5 +18,11 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+  },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: "./src/test/setup.ts",
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
 });

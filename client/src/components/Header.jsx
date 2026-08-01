@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useCart } from "../context/CartContext.jsx";
+import { useCart } from "../hooks";
 
 export default function Header({ site, onOpenCart, query, onQueryChange }) {
   const { totalItems } = useCart();
@@ -13,10 +13,12 @@ export default function Header({ site, onOpenCart, query, onQueryChange }) {
         </a>
 
         <div className="search">
-          <span className="search-icon">🔎</span>
+          <span className="search-icon" aria-hidden>
+            🔎
+          </span>
           <input
             type="search"
-            placeholder="Buscar producto..."
+            placeholder="Buscar..."
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             aria-label="Buscar productos"
@@ -28,11 +30,16 @@ export default function Header({ site, onOpenCart, query, onQueryChange }) {
           onClick={onOpenCart}
           whileTap={{ scale: 0.92 }}
           whileHover={{ scale: 1.05 }}
-          aria-label="Abrir carrito"
+          aria-label={
+            totalItems > 0
+              ? `Abrir carrito, ${totalItems} productos`
+              : "Abrir carrito"
+          }
         >
-          <span className="cart-icon">🛒</span>
+          <span className="cart-icon" aria-hidden>
+            🛒
+          </span>
           <span className="cart-label">Carrito</span>
-          <span className="cart-label-mobile">Carrito</span>
           {totalItems > 0 && (
             <motion.span
               key={totalItems}

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useMediaQuery } from "../hooks/useMediaQuery.js";
+import { useMediaQuery } from "../hooks";
 
 const RESCUED_URL = "https://animales-rescatados.vercel.app/";
 const RESCUED_IMAGE = "/images/rescued/street-puppy.jpg";
